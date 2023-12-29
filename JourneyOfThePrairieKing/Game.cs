@@ -78,7 +78,7 @@ namespace JourneyOfThePrairieKing
 
          _textureShader = new Shader("data/shaders/textureShader.vert", "data/shaders/textureShader.frag");
          _textureMap0 = Texture.LoadFromFile("data/textures/char1.png");
-         _textureMap1 = Texture.LoadFromFile("data/textures/enemy1.png");
+         _textureMap1 = Texture.LoadFromFile("data/textures/enemy2.png");
          _textureMap2 = Texture.LoadFromFile("data/textures/projectile1.png");
 
          _mainCharacter = new Character();
@@ -202,17 +202,27 @@ namespace JourneyOfThePrairieKing
             }
          }
 
+         Console.WriteLine(_projectiles.Count);
 
+         // TODO: long living projectiles bug
          foreach (var projectile in _projectiles)
          {
             projectile.Position += projectile.MoveSpeed * projectile.Direction;
+
+            if (projectile.Position.X < -1.0f || projectile.Position.X > 1.0f
+               || projectile.Position.Y < -1.0f || projectile.Position.Y > 1.0f)
+            {
+               _projectiles.Remove(projectile);
+               break;
+            }
+
             foreach (var enemy in _enemies)
             {
                if (Collision.Compute(projectile, enemy) is true)
                {
                   _enemies.Remove(enemy);
                   _projectiles.Remove(projectile);
-                  Console.WriteLine("enemy down!");
+                  //Console.WriteLine("enemy down!");
                   break;
                }
             }
@@ -306,7 +316,20 @@ namespace JourneyOfThePrairieKing
 
       private void SpawnProjectile(Vector2 position, Vector2 direction)
       {
-         _projectiles.Add(new Projectile(position, direction, 1));
+         //_projectiles.Add(new Projectile(position, direction, 1));
+
+         if (true)
+         {
+            for (int i = -1; i < 2; i++)
+            {
+               for (int j = -1; j < 2; j++)
+               {
+                  direction = new Vector2(i, j);
+                  direction.Normalize();
+                  _projectiles.Add(new Projectile(position, direction, 1));
+               }
+            }
+         }
       }
 
 

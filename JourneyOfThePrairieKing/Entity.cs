@@ -50,8 +50,8 @@ namespace JourneyOfThePrairieKing
       {
          Size = new Vector2(64.0f / 1920, 64.0f / 1080);
          Position = new Vector2(0, 0);
-         MoveSpeed = 0.15f;
-         ReloadTime = 200;
+         MoveSpeed = 0.11f;
+         ReloadTime = 350;
 
          _vertices = new VertexPositionTexture[]
          {
@@ -181,7 +181,7 @@ namespace JourneyOfThePrairieKing
          Damage = damage;
          Position = position;
          Direction = direction;
-         MoveSpeed = 0.005f;
+         MoveSpeed = 0.00125f;
 
 
          _vertices = new VertexPositionTexture[]
