@@ -8,7 +8,7 @@ namespace JourneyOfThePrairieKing
       {
          using (Game game = new Game())
          {
-            game.UpdateFrequency = 1000;
+            game.UpdateFrequency = 500;
             game.Run();
          }
       }
