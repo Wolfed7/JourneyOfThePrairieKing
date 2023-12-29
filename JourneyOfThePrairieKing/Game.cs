@@ -5,27 +5,38 @@ using OpenTK.Mathematics;
 using JourneyOfThePrairieKing;
 using CG_PR3;
 using OpenTK.Windowing.GraphicsLibraryFramework;
+using System.Diagnostics;
 
 namespace JourneyOfThePrairieKing
 {
    public class Game : GameWindow
    {
+      #region Constants
+
+      private const float _gameSpeed = 1500.0f;
       private const int _gameWidth = 1920;
       private const int _gameHeight = 1080;
       private const double _maxDeltaTime = 1.0 / 30.0;
       private const double _minDeltaTime = 1.0 / 120.0;
 
+      #endregion
 
-      public Shader _textureShader;
-      public Texture _textureMap0;
-      public Character _mainCharacter;
+      private Stopwatch _timer;
 
-      public Enemy enemy1;
+      private long _lastShotTime;
 
-      Texture _textureMap1;
+      private Shader _textureShader;
+      private Texture _textureMap0;
+      private Character _mainCharacter;
+
+      private HashSet<Enemy> _enemies;
+      private HashSet<Projectile> _projectiles;
+
+      private Texture _textureMap1;
 
       private double _lastFrameTime = 0;
 
+      private Texture _textureMap2;
 
 
       public Game(int width = _gameWidth, int height = _gameHeight, string title = "CG_PR1")
@@ -36,7 +47,7 @@ namespace JourneyOfThePrairieKing
                    Title = title,
                    //Size = (width, height),
                    WindowState = WindowState.Fullscreen,
-                   //WindowBorder = WindowBorder.Fixed,
+                   WindowBorder = WindowBorder.Fixed,
                    StartVisible = false,
                    StartFocused = true,
                    API = ContextAPI.OpenGL,
@@ -57,6 +68,7 @@ namespace JourneyOfThePrairieKing
 
       protected override void OnLoad()
       {
+         WindowState = WindowState.Fullscreen;
          IsVisible = true;
          GL.Enable(EnableCap.Blend);
          GL.BlendFunc((BlendingFactor)BlendingFactorSrc.SrcAlpha, (BlendingFactor)BlendingFactorDest.OneMinusSrcAlpha);
@@ -66,19 +78,21 @@ namespace JourneyOfThePrairieKing
 
          _textureShader = new Shader("data/shaders/textureShader.vert", "data/shaders/textureShader.frag");
          _textureMap0 = Texture.LoadFromFile("data/textures/char1.png");
-         _textureMap1 = Texture.LoadFromFile("data/textures/enemy3.png");
+         _textureMap1 = Texture.LoadFromFile("data/textures/enemy1.png");
+         _textureMap2 = Texture.LoadFromFile("data/textures/projectile1.png");
 
          _mainCharacter = new Character();
+         _enemies = new HashSet<Enemy>();
+         _projectiles = new HashSet<Projectile>();
 
-         enemy1 = new Enemy();
-         enemy1.Position = new Vector2(-0.5f, -0.8f);
+         _timer = Stopwatch.StartNew();
+         _lastShotTime = 0;
 
          base.OnLoad();
       }
 
       protected override void OnUnload()
       {
-
 
          base.OnUnload();
       }
@@ -97,6 +111,15 @@ namespace JourneyOfThePrairieKing
          enemy1.Position += enemy1.MoveSpeed * distanceToChar * (float)deltaTime;
 
          var previousPosiiton = _mainCharacter.Position;
+
+         if (_enemies.Count < 10)
+         {
+            SpawnEnemy();
+         }
+
+
+         #region Movement
+
 
          float moveX = 0f;
          float moveY = 0f;
@@ -132,13 +155,70 @@ namespace JourneyOfThePrairieKing
             _mainCharacter.Position += moveDir * _mainCharacter.MoveSpeed * (float)deltaTime;
          }
 
-
-
-         if (Collision.Compute(_mainCharacter, enemy1) is true)
+         foreach (var enemy in _enemies)
          {
-            //_mainCharacter.Position = previousPosiiton;
-            Console.WriteLine("Collision!");
+            if (Collision.Compute(_mainCharacter, enemy) is true)
+            {
+               _mainCharacter.Position = previousPosiiton;
+               Console.WriteLine("Collision!");
+            }
          }
+
+         #endregion
+
+
+         #region Shoot
+
+         //Console.WriteLine(_timer.ElapsedMilliseconds + " " + _lastShotTime);
+
+         if (_timer.ElapsedMilliseconds - _lastShotTime > _mainCharacter.ReloadTime)
+         {
+            float projDirX = 0.0f;
+            float projDirY = 0.0f;
+
+            if (IsKeyDown(Keys.Left))
+            {
+               projDirX = -1.0f;
+            }
+            if (IsKeyDown(Keys.Right))
+            {
+               projDirX = 1.0f;
+            }
+            if (IsKeyDown(Keys.Up))
+            {
+               projDirY = 1.0f;
+            }
+            if (IsKeyDown(Keys.Down))
+            {
+               projDirY = -1.0f;
+            }
+
+            if (projDirX != 0.0f || projDirY != 0.0f)
+            {
+               var projectileDir = new Vector2(projDirX, projDirY);
+               projectileDir.Normalize();
+               SpawnProjectile(_mainCharacter.Position, projectileDir);
+               _lastShotTime = _timer.ElapsedMilliseconds;
+            }
+         }
+
+
+         foreach (var projectile in _projectiles)
+         {
+            projectile.Position += projectile.MoveSpeed * projectile.Direction;
+            foreach (var enemy in _enemies)
+            {
+               if (Collision.Compute(projectile, enemy) is true)
+               {
+                  _enemies.Remove(enemy);
+                  _projectiles.Remove(projectile);
+                  Console.WriteLine("enemy down!");
+                  break;
+               }
+            }
+         }
+
+         #endregion 
 
          _lastFrameTime = currentTime;
          base.OnUpdateFrame(args);
@@ -148,30 +228,45 @@ namespace JourneyOfThePrairieKing
       {
          #region Character
 
-         GL.Clear(ClearBufferMask.ColorBufferBit);
-         _textureShader.Use();
-         var modelMatrix = Matrix4.CreateTranslation(new Vector3(_mainCharacter.Position.X, _mainCharacter.Position.Y, 0.0f));
+         {
+            GL.Clear(ClearBufferMask.ColorBufferBit);
+            _textureShader.Use();
+            var modelMatrix = Matrix4.CreateTranslation(new Vector3(_mainCharacter.Position.X, _mainCharacter.Position.Y, 0.0f));
 
-         _textureShader.SetMatrix4("model", modelMatrix);
-         _textureMap0.Use(TextureUnit.Texture0);
-         _textureShader.SetInt("textureMap", 0);
+            _textureShader.SetMatrix4("model", modelMatrix);
+            _textureMap0.Use(TextureUnit.Texture0);
+            _textureShader.SetInt("textureMap", 0);
 
-         _mainCharacter.Draw();
+            _mainCharacter.Draw();
+         }
 
-         #endregion Character
-
+         #endregion
 
          #region Enemies
-         
+         foreach (var enemy in _enemies)
+         {
+            var modelMatrix = Matrix4.CreateTranslation(new Vector3(enemy.Position.X, enemy.Position.Y, 0.0f));
 
-         var modelMatrixEnemy = Matrix4.CreateTranslation(new Vector3(enemy1.Position.X, enemy1.Position.Y, 0.0f));
+            _textureShader.SetMatrix4("model", modelMatrix);
+            _textureMap1.Use(TextureUnit.Texture1);
+            _textureShader.SetInt("textureMap", 1);
 
-         _textureShader.SetMatrix4("model", modelMatrixEnemy);
-         _textureMap1.Use(TextureUnit.Texture1);
-         _textureShader.SetInt("textureMap", 1);
+            enemy.Draw();
+         }
+         #endregion
 
-         enemy1.Draw();
-         #endregion Enemies
+         #region Projectiles
+         foreach (var projectile in _projectiles)
+         {
+            var modelMatrix = Matrix4.CreateTranslation(new Vector3(projectile.Position.X, projectile.Position.Y, 0.0f));
+
+            _textureShader.SetMatrix4("model", modelMatrix);
+            _textureMap2.Use(TextureUnit.Texture2);
+            _textureShader.SetInt("textureMap", 2);
+
+            projectile.Draw();
+         }
+         #endregion
 
          SwapBuffers();
          base.OnRenderFrame(args);
@@ -186,7 +281,67 @@ namespace JourneyOfThePrairieKing
       protected override void OnKeyDown(KeyboardKeyEventArgs e)
       {
 
+         #region Window management
+         switch (e.Key)
+         {
+            case Keys.F:
+            {
+               WindowState = WindowState == WindowState.Fullscreen ? WindowState.Maximized : WindowState.Fullscreen;
+               Console.WriteLine(WindowState);
+               break;
+            }
+
+            case Keys.Escape:
+            {
+               this.Close();
+               break;
+            }
+         }
+         #endregion
+
          base.OnKeyDown(e);
+      }
+
+
+
+      private void SpawnProjectile(Vector2 position, Vector2 direction)
+      {
+         _projectiles.Add(new Projectile(position, direction, 1));
+      }
+
+
+      private void SpawnEnemy()
+      {
+         var spawnPositions = new List<Vector2>()
+         {
+            // bottom
+            new (0.0f, -0.9f),
+            new (-0.1f, -0.9f),
+            new (0.1f, -0.9f),
+
+            // left
+            new (-0.9f, 0.0f),
+            new (-0.9f, -0.1f),
+            new (-0.9f, 0.1f),
+
+            // up
+            new (0.0f, 0.9f),
+            new (-0.1f, 0.9f),
+            new (0.1f, 0.9f),
+
+            // right
+            new (0.9f, 0.0f),
+            new (0.9f, -0.1f),
+            new (0.9f, 0.1f),
+         };
+
+         for (int i = 0; i < spawnPositions.Count; i++)
+         {
+            Enemy enemy = new Enemy();
+            enemy.Position = spawnPositions[i];
+
+            _enemies.Add(enemy);
+         }
       }
    }
 }

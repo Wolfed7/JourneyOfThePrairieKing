@@ -42,6 +42,7 @@ namespace JourneyOfThePrairieKing
       public override Vector2 Size { get; init; }
       public override Vector2 Position { get; set; }
       public override float MoveSpeed { get; set; }
+      public long ReloadTime { get; set; }
 
       public override int HitPoints => _hitPoints;
 
@@ -49,8 +50,8 @@ namespace JourneyOfThePrairieKing
       {
          Size = new Vector2(64.0f / 1920, 64.0f / 1080);
          Position = new Vector2(0, 0);
-         MoveSpeed = 0.05f;
-
+         MoveSpeed = 0.15f;
+         ReloadTime = 200;
 
          _vertices = new VertexPositionTexture[]
          {
@@ -151,6 +152,63 @@ namespace JourneyOfThePrairieKing
          }
       }
 
+
+      protected override void Die()
+      {
+
+      }
+   }
+
+   public sealed class Projectile : Entity
+   {
+      private VertexPositionTexture[] _vertices;
+      private VertexBufferObject _vbo;
+      private VertexArrayObject _vao;
+
+      public int Damage { get; }
+      public Vector2 Direction { get; }
+
+      public override Vector2 Size { get; init; }
+      public override Vector2 Position { get; set; }
+      public override float MoveSpeed { get; set; }
+
+      public override int HitPoints => 0;
+
+      public Projectile(Vector2 position, Vector2 direction, int damage)
+      {
+         Size = new Vector2(16.0f / 1920, 16.0f / 1080);
+
+         Damage = damage;
+         Position = position;
+         Direction = direction;
+         MoveSpeed = 0.005f;
+
+
+         _vertices = new VertexPositionTexture[]
+         {
+            new (new Vector2(0, 0), new Vector2(0.0f, 0.0f)),
+            new (new Vector2(Size.X, 0), new Vector2(1.0f, 0.0f)),
+            new (new Vector2(0, Size.Y), new Vector2(0.0f, 1.0f)),
+            new (new Vector2(Size.X, Size.Y), new Vector2(1.0f, 1.0f))
+         };
+
+         _vbo = new VertexBufferObject(_vertices, BufferUsageHint.StreamDraw);
+         _vbo.Bind();
+
+         _vao = new VertexArrayObject();
+         _vao.Bind();
+      }
+
+      public void Draw()
+      {
+         _vao.Bind();
+         GL.DrawArrays(PrimitiveType.TriangleStrip, 0, _vertices.Length);
+      }
+
+      public override void GotDamage(int damage)
+      {
+
+      }
 
       protected override void Die()
       {
