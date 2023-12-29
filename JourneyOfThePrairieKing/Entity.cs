@@ -49,7 +49,7 @@ namespace JourneyOfThePrairieKing
       {
          Size = new Vector2(64.0f / 1920, 64.0f / 1080);
          Position = new Vector2(0, 0);
-         MoveSpeed = 0.15f;
+         MoveSpeed = 0.05f;
 
 
          _vertices = new VertexPositionTexture[]
@@ -113,7 +113,7 @@ namespace JourneyOfThePrairieKing
       {
          Size = new Vector2(64.0f / 1920, 64.0f / 1080);
          Position = new Vector2(0, 0);
-         MoveSpeed = 0.15f;
+         MoveSpeed = 0.03f;
 
 
          _vertices = new VertexPositionTexture[]

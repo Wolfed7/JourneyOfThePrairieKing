@@ -66,11 +66,12 @@ namespace JourneyOfThePrairieKing
 
          _textureShader = new Shader("data/shaders/textureShader.vert", "data/shaders/textureShader.frag");
          _textureMap0 = Texture.LoadFromFile("data/textures/char1.png");
-         _textureMap1 = Texture.LoadFromFile("data/textures/enemy1.png");
+         _textureMap1 = Texture.LoadFromFile("data/textures/enemy3.png");
 
          _mainCharacter = new Character();
 
          enemy1 = new Enemy();
+         enemy1.Position = new Vector2(-0.5f, -0.8f);
 
          base.OnLoad();
       }
@@ -91,28 +92,51 @@ namespace JourneyOfThePrairieKing
          deltaTime = Math.Min(deltaTime, _maxDeltaTime);
          deltaTime = Math.Max(deltaTime, _minDeltaTime);
 
+         var distanceToChar = _mainCharacter.Position - enemy1.Position;
+         distanceToChar.Normalize();
+         enemy1.Position += enemy1.MoveSpeed * distanceToChar * (float)deltaTime;
+
          var previousPosiiton = _mainCharacter.Position;
+
+         float moveX = 0f;
+         float moveY = 0f;
 
          if (IsKeyDown(Keys.A))
          {
-            _mainCharacter.Position += _mainCharacter.MoveSpeed * new Vector2(-2000.0f / 1920, 0) * (float)deltaTime;
+            moveX = -2000.0f;
+            //_mainCharacter.Position += _mainCharacter.MoveSpeed * new Vector2(-2000.0f / _gameWidth, 0) * (float)deltaTime;
+            
          }
          if (IsKeyDown(Keys.D))
          {
-            _mainCharacter.Position += _mainCharacter.MoveSpeed * new Vector2(2000.0f / 1920, 0) * (float)deltaTime;
+            moveX = 2000.0f;
+            //_mainCharacter.Position += _mainCharacter.MoveSpeed * new Vector2(2000.0f / _gameWidth, 0) * (float)deltaTime;
          }
          if (IsKeyDown(Keys.W))
          {
-            _mainCharacter.Position += _mainCharacter.MoveSpeed * new Vector2(0, 2000.0f / 1080) * (float)deltaTime;
+            moveY = 2000.0f;
+            //_mainCharacter.Position += _mainCharacter.MoveSpeed * new Vector2(0, 2000.0f / _gameHeight) * (float)deltaTime;
          }
          if (IsKeyDown(Keys.S))
          {
-            _mainCharacter.Position += _mainCharacter.MoveSpeed * new Vector2(0, -2000.0f / 1080) * (float)deltaTime;
+            moveY = -2000.0f;
+            //_mainCharacter.Position += _mainCharacter.MoveSpeed * new Vector2(0, -2000.0f / _gameHeight) * (float)deltaTime;
          }
-;
+         
+         Console.WriteLine(moveX + " " + moveY);
+
+         if (moveX != 0f || moveY != 0f)
+         {
+            Vector2 moveDir = new Vector2(moveX, moveY);
+            moveDir.Normalize();
+            _mainCharacter.Position += moveDir * _mainCharacter.MoveSpeed * (float)deltaTime;
+         }
+
+
+
          if (Collision.Compute(_mainCharacter, enemy1) is true)
          {
-            _mainCharacter.Position = previousPosiiton;
+            //_mainCharacter.Position = previousPosiiton;
             Console.WriteLine("Collision!");
          }
 
@@ -138,7 +162,7 @@ namespace JourneyOfThePrairieKing
 
 
          #region Enemies
-         enemy1.Position = new Vector2(-0.5f, -0.8f);
+         
 
          var modelMatrixEnemy = Matrix4.CreateTranslation(new Vector3(enemy1.Position.X, enemy1.Position.Y, 0.0f));
 
