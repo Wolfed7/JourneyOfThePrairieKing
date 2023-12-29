@@ -99,6 +99,7 @@ namespace JourneyOfThePrairieKing
 
       protected override void OnUpdateFrame(FrameEventArgs args)
       {
+         // TODO: fix delta time
          double currentTime = args.Time;
          double deltaTime = currentTime - _lastFrameTime;
 
@@ -106,9 +107,12 @@ namespace JourneyOfThePrairieKing
          deltaTime = Math.Min(deltaTime, _maxDeltaTime);
          deltaTime = Math.Max(deltaTime, _minDeltaTime);
 
-         var distanceToChar = _mainCharacter.Position - enemy1.Position;
-         distanceToChar.Normalize();
-         enemy1.Position += enemy1.MoveSpeed * distanceToChar * (float)deltaTime;
+         foreach (var enemy in _enemies)
+         {
+            var distanceToChar = _mainCharacter.Position - enemy.Position;
+            distanceToChar.Normalize();
+            enemy.Position += enemy.MoveSpeed * distanceToChar * (float)deltaTime;
+         }
 
          var previousPosiiton = _mainCharacter.Position;
 
@@ -127,26 +131,22 @@ namespace JourneyOfThePrairieKing
          if (IsKeyDown(Keys.A))
          {
             moveX = -2000.0f;
-            //_mainCharacter.Position += _mainCharacter.MoveSpeed * new Vector2(-2000.0f / _gameWidth, 0) * (float)deltaTime;
             
          }
          if (IsKeyDown(Keys.D))
          {
             moveX = 2000.0f;
-            //_mainCharacter.Position += _mainCharacter.MoveSpeed * new Vector2(2000.0f / _gameWidth, 0) * (float)deltaTime;
          }
          if (IsKeyDown(Keys.W))
          {
             moveY = 2000.0f;
-            //_mainCharacter.Position += _mainCharacter.MoveSpeed * new Vector2(0, 2000.0f / _gameHeight) * (float)deltaTime;
          }
          if (IsKeyDown(Keys.S))
          {
             moveY = -2000.0f;
-            //_mainCharacter.Position += _mainCharacter.MoveSpeed * new Vector2(0, -2000.0f / _gameHeight) * (float)deltaTime;
          }
          
-         Console.WriteLine(moveX + " " + moveY);
+         //Console.WriteLine(moveX + " " + moveY);
 
          if (moveX != 0f || moveY != 0f)
          {
@@ -160,7 +160,7 @@ namespace JourneyOfThePrairieKing
             if (Collision.Compute(_mainCharacter, enemy) is true)
             {
                _mainCharacter.Position = previousPosiiton;
-               Console.WriteLine("Collision!");
+               //Console.WriteLine("Collision!");
             }
          }
 
