@@ -26,6 +26,12 @@
     <None Update="data\textures\hitpoint.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <None Update="data\textures\obstacle.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="data\textures\invisible_obstacle.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Update="data\textures\projectile3.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>

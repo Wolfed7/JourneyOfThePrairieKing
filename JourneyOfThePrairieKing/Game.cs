@@ -42,7 +42,7 @@ namespace JourneyOfThePrairieKing
 
       private HashSet<Enemy> _enemies;
       private HashSet<Projectile> _projectiles;
-      private HashSet<Obstacle> _obstacles;
+      private HashSet<Obstacle> _boundaryObstacles;
       private List<Level> _levels;
 
       public Game(int width, int height, string title = "Game")
@@ -89,6 +89,32 @@ namespace JourneyOfThePrairieKing
          _enemies = new HashSet<Enemy>();
          _projectiles = new HashSet<Projectile>();
          _levels = new List<Level>();
+
+         {
+            _boundaryObstacles = new HashSet<Obstacle>
+            {
+               // up
+               new Obstacle(new Vector2(-0.5f, 0.8f), new Vector2(0.45f, 0.1f)),
+               new Obstacle(new Vector2(-0.05f, 0.89f), new Vector2(0.2f, 0.01f)),
+               new Obstacle(new Vector2(0.15f, 0.8f), new Vector2(0.4f, 0.1f)),
+
+               // left
+               new Obstacle(new Vector2(-0.5f, 0.1f), new Vector2(0.06f, 0.7f)),
+               new Obstacle(new Vector2(-0.5f, -0.25f), new Vector2(0.01f, 0.35f)),
+               new Obstacle(new Vector2(-0.5f, -0.85f), new Vector2(0.06f, 0.6f)),
+
+               // bottom
+               new Obstacle(new Vector2(-0.5f, -0.95f), new Vector2(0.45f, 0.1f)),
+               new Obstacle(new Vector2(-0.05f, -0.95f), new Vector2(0.2f, 0.01f)),
+               new Obstacle(new Vector2(0.15f, -0.95f), new Vector2(0.4f, 0.1f)),
+
+               // right
+               new Obstacle(new Vector2(0.48f, 0.1f), new Vector2(0.06f, 0.7f)),
+               new Obstacle(new Vector2(0.53f, -0.25f), new Vector2(0.01f, 0.35f)),
+               new Obstacle(new Vector2(0.48f, -0.85f), new Vector2(0.06f, 0.6f)),
+            };
+
+         }
 
          _currentLevel = 0;
 
@@ -138,24 +164,24 @@ namespace JourneyOfThePrairieKing
          deltaTime = (float)Math.Min(deltaTime, _maxDeltaTime);
          deltaTime = (float)Math.Max(deltaTime, _minDeltaTime);
 
-         foreach (var enemy1 in _enemies)
-         {
-            var prevPos = enemy1.Position;
-            var distanceToChar = _mainCharacter.Position - enemy1.Position;
-            distanceToChar.Normalize();
-            enemy1.Position += _gameSpeed * enemy1.Velocity * WinRatio * distanceToChar * deltaTime;
+         //foreach (var enemy1 in _enemies)
+         //{
+         //   var prevPos = enemy1.Position;
+         //   var distanceToChar = _mainCharacter.Position - enemy1.Position;
+         //   distanceToChar.Normalize();
+         //   enemy1.Position += _gameSpeed * enemy1.Velocity * WinRatio * distanceToChar * deltaTime;
 
-            foreach (var enemy2 in _enemies.Where(_ => _ != enemy1))
-            {
-               if (Entity.CheckCollision(enemy1, enemy2) is true)
-               {
-                  var vecToEnemy2 = enemy2.Position - enemy1.Position;
-                  vecToEnemy2.Normalize();
-                  enemy1.Position -= 1.0f * _gameSpeed * enemy1.Velocity * vecToEnemy2 * deltaTime;
-                  break;
-               }
-            }
-         }
+         //   foreach (var enemy2 in _enemies.Where(_ => _ != enemy1))
+         //   {
+         //      if (Entity.CheckCollision(enemy1, enemy2) is true)
+         //      {
+         //         var vecToEnemy2 = enemy2.Position - enemy1.Position;
+         //         vecToEnemy2.Normalize();
+         //         enemy1.Position -= 2.0f * _gameSpeed * enemy1.Velocity * WinRatio * vecToEnemy2 * deltaTime;
+         //         //break;
+         //      }
+         //   }
+         //}
 
          var previousPosiiton = _mainCharacter.Position;
 
@@ -197,6 +223,20 @@ namespace JourneyOfThePrairieKing
             Vector2 moveDir = new Vector2(moveX, moveY);
             moveDir.Normalize();
             _mainCharacter.Position += _gameSpeed * _mainCharacter.Velocity * WinRatio * moveDir * deltaTime;
+
+            foreach (var obstacle in _boundaryObstacles)
+            {
+               if (Entity.CheckCollision(_mainCharacter, obstacle) is true)
+               {
+                  //var vecToObstacle = (obstacle.Position + obstacle.Size / 2) - (_mainCharacter.Position + _mainCharacter.Size / 2);
+                  //vecToObstacle.Normalize();
+                  //_mainCharacter.Position -= 2.0f * _gameSpeed * _mainCharacter.Velocity * WinRatio * vecToObstacle * deltaTime;
+
+                  _mainCharacter.Position -= 2.0f * _gameSpeed * _mainCharacter.Velocity * WinRatio * moveDir * deltaTime;
+
+                  //Console.WriteLine("Collision with obstacle!");
+               }
+            }
          }
 
          foreach (var enemy in _enemies)
@@ -252,15 +292,24 @@ namespace JourneyOfThePrairieKing
 
          //Console.WriteLine(_projectiles.Count);
 
-         // TODO: long living projectiles bug
          foreach (var projectile in _projectiles)
          {
+            bool isProjectileAlive = true;
             projectile.Position += projectile.Velocity * projectile.Direction;
 
-            if (projectile.Position.X < -1.0f || projectile.Position.X > 1.0f
-               || projectile.Position.Y < -1.0f || projectile.Position.Y > 1.0f)
+
+            foreach (var obstacle in _boundaryObstacles)
             {
-               _projectiles.Remove(projectile);
+               if (Entity.CheckCollision(projectile, obstacle) is true)
+               {
+                  _projectiles.Remove(projectile);
+                  isProjectileAlive = false;
+                  break;
+               }
+            }
+
+            if (isProjectileAlive is false)
+            {
                break;
             }
 
@@ -387,22 +436,34 @@ namespace JourneyOfThePrairieKing
 
             _textures["digits"].Use(TextureUnit.Texture1);
             _textureShader.SetInt("textureMap", 1);
-            _charInterface.DrawDigit(_mainCharacter.HitPoints + 9);
+            _charInterface.DrawDigit(_mainCharacter.HitPoints);
          }
          #endregion
 
 
-         //#region Bonuses
-         //{
-         //   var modelMatrixHP = Matrix4.CreateTranslation(new Vector3(0.22f, 0.44f, 0.0f));
-         //   var scaleMatrix = Matrix4.CreateScale(new Vector3(0.6f, 0.6f, 1.0f));
-         //   _textureShader.SetMatrix4("model", scaleMatrix * modelMatrixHP);
+         foreach (var obstacle in _boundaryObstacles)
+         {
+            var modelMatrix = Matrix4.CreateTranslation(new Vector3(obstacle.Position.X, obstacle.Position.Y, 0.0f));
 
-         //   _textures["hitpoint"].Use(TextureUnit.Texture1);
-         //   _textureShader.SetInt("textureMap", 1);
-         //   _charInterface.DrawHitPoints();
-         //}
-         //#endregion
+            _textureShader.SetMatrix4("model", modelMatrix);
+            _textures["invisible_obstacle"].Use(TextureUnit.Texture2);
+            _textureShader.SetInt("textureMap", 2);
+
+            obstacle.Draw();
+         }
+
+
+         #region Bonuses
+         {
+            var modelMatrixHP = Matrix4.CreateTranslation(new Vector3(0.22f, 0.44f, 0.0f));
+            var scaleMatrix = Matrix4.CreateScale(new Vector3(0.6f, 0.6f, 1.0f));
+            _textureShader.SetMatrix4("model", scaleMatrix * modelMatrixHP);
+
+            _textures["hitpoint"].Use(TextureUnit.Texture1);
+            _textureShader.SetInt("textureMap", 1);
+            _charInterface.DrawHitPoints();
+         }
+         #endregion
 
          SwapBuffers();
          base.OnRenderFrame(args);
@@ -472,27 +533,27 @@ namespace JourneyOfThePrairieKing
          var spawnPositions = new List<Vector2>()
          {
             // bottom
-            new (0.0f, -0.9f),
-            new (-0.1f, -0.9f),
-            new (0.1f, -0.9f),
+            new (-0.043f, -0.93f),
+            new (0.02f, -0.93f),
+            new (0.084f, -0.93f),
 
             // left
-            new (-0.9f, 0.0f),
-            new (-0.9f, -0.1f),
-            new (-0.9f, 0.1f),
+            new (-0.45f, 0.0f),
+            new (-0.45f, -0.1f),
+            new (-0.45f, 0.1f),
 
             // up
-            new (0.0f, 0.9f),
-            new (-0.1f, 0.9f),
-            new (0.1f, 0.9f),
+            new (-0.043f, 0.78f),
+            new (0.02f, 0.78f),
+            new (0.084f, 0.78f),
 
             // right
-            new (0.9f, 0.0f),
-            new (0.9f, -0.1f),
-            new (0.9f, 0.1f),
+            new (0.42f, 0.0f),
+            new (0.42f, -0.1f),
+            new (0.42f, 0.1f),
          };
 
-         for (int i = 0; i < spawnPositions.Count - 5; i++)
+         for (int i = 0; i < spawnPositions.Count; i++)
          {
             Enemy enemy = new Enemy((Enemy.EnemyType)(i % 3));
             

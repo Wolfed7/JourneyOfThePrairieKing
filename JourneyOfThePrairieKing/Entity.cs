@@ -116,7 +116,7 @@ namespace JourneyOfThePrairieKing
 
       public Enemy(EnemyType type)
       {
-         Size = new Vector2(128.0f / 1920, 128.0f / 1080);
+         Size = new Vector2(110.0f / 1920, 110.0f / 1080);
          Position = new Vector2(0, 0);
 
          switch (type)
@@ -230,18 +230,15 @@ namespace JourneyOfThePrairieKing
       private VertexBufferObject _vbo;
       private VertexArrayObject _vao;
 
-      public int Damage { get; }
-      public Vector2 Direction { get; }
-
       public override Vector2 Size { get; init; }
       public override Vector2 Position { get; set; }
       public override float Velocity { get; set; }
 
-      public Obstacle(Vector2 position)
+      public Obstacle(Vector2 position, Vector2 size)
       {
-         Size = new Vector2(16.0f / 1920, 16.0f / 1080);
+         Position = position;
+         Size = size;
          Velocity = 0.0f;
-
 
          _vertices = new VertexPositionTexture[]
          {
@@ -262,12 +259,6 @@ namespace JourneyOfThePrairieKing
       {
          _vao.Bind();
          GL.DrawArrays(PrimitiveType.TriangleStrip, 0, _vertices.Length);
-      }
-
-      public void Die()
-      {
-         _vao.Dispose();
-         _vbo.Dispose();
       }
    }
 
