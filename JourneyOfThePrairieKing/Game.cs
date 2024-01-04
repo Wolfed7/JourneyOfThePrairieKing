@@ -1,13 +1,10 @@
-﻿using OpenTK.Windowing.Common;
-using OpenTK.Windowing.Desktop;
+﻿using CG_PR3;
 using OpenTK.Graphics.OpenGL4;
 using OpenTK.Mathematics;
-using JourneyOfThePrairieKing;
-using CG_PR3;
+using OpenTK.Windowing.Common;
+using OpenTK.Windowing.Desktop;
 using OpenTK.Windowing.GraphicsLibraryFramework;
 using System.Diagnostics;
-using System.Drawing;
-using System;
 
 namespace JourneyOfThePrairieKing
 {
@@ -27,10 +24,13 @@ namespace JourneyOfThePrairieKing
       private const float _gameSpeed = 1.0f;
       private const double _maxDeltaTime = 1.0 / 30.0;
       private const double _minDeltaTime = 1.0 / 120.0;
+      private const long _enemySpawnCooldown = 2000;
 
       #endregion
 
+
       private bool enemySpawnAllowed;
+      private long _enemyLastSpawnTime;
 
       private Vector2 WinRatio;
       private int _currentLevel;
@@ -128,6 +128,8 @@ namespace JourneyOfThePrairieKing
          _currentLevel = 0;
 
          _gameRuntime = Stopwatch.StartNew();
+         Console.WriteLine(_gameRuntime.ElapsedMilliseconds);
+         _gameRuntime.Stop();
 
          _gameState = GameState.Start;
 
@@ -140,10 +142,12 @@ namespace JourneyOfThePrairieKing
 
          _levels.Add(new Level(new Vector2(ClientSize.X / 2.0f / ClientSize.X - 1.0f, -0.95f), new Vector2((ClientSize.Y - 80.0f) / ClientSize.X * 2.0f, (ClientSize.Y - 80.0f) / ClientSize.Y * 2.0f)));
 
-         _levelTimer = new Timer(1200, new Vector2(-0.5f, 0.95f), new Vector2((ClientSize.Y - 80.0f) / ClientSize.X * 2.0f, 0.02f));
+         _levelTimer = new Timer(12000, new Vector2(-0.5f, 0.95f), new Vector2((ClientSize.Y - 80.0f) / ClientSize.X * 2.0f, 0.02f));
 
          WinRatio = new Vector2(ClientSize.Y, ClientSize.X);
          WinRatio.Normalize();
+
+         _enemyLastSpawnTime = 0;
 
          base.OnLoad();
       }
@@ -204,8 +208,12 @@ namespace JourneyOfThePrairieKing
 
          var previousPosiiton = _mainCharacter.Position;
 
-         if (_enemies.Count < 3 && enemySpawnAllowed is true)
+         if (_gameRuntime.ElapsedMilliseconds - _enemyLastSpawnTime > _enemySpawnCooldown
+            && _enemies.Count < 18 
+            && enemySpawnAllowed is true
+            )
          {
+            _enemyLastSpawnTime = _gameRuntime.ElapsedMilliseconds;
             SpawnEnemy();
          }
 
@@ -283,7 +291,7 @@ namespace JourneyOfThePrairieKing
             if(Entity.CheckCollision(_mainCharacter, enemy) is true)
             {
                _mainCharacter.GotDamage(1, _gameRuntime.ElapsedMilliseconds);
-               if (_mainCharacter.HitPoints <= 0)
+               if (_mainCharacter.HitPoints < 0)
                {
                   _gameState = GameState.GameOver;
                }
@@ -575,14 +583,17 @@ namespace JourneyOfThePrairieKing
             {
                case GameState.Start:
                   _gameState = GameState.Run;
+                  _gameRuntime.Start();
                   break;
 
                case GameState.Run:
                   _gameState = GameState.Pause;
+                  _gameRuntime.Stop();
                   break;
 
                case GameState.Pause:
                   _gameState = GameState.Run;
+                  _gameRuntime.Start();
                   break;
 
                case GameState.GameOver:
@@ -592,6 +603,7 @@ namespace JourneyOfThePrairieKing
                   _bonuses.Clear();
                   _levelTimer.Reset();
                   enemySpawnAllowed = true;
+                  _enemyLastSpawnTime = 0;
                   _gameState = GameState.Run;
                   break;
 
@@ -602,6 +614,7 @@ namespace JourneyOfThePrairieKing
                   _bonuses.Clear();
                   _levelTimer.Reset();
                   enemySpawnAllowed = true;
+                  _enemyLastSpawnTime = 0;
                   _gameState = GameState.Run;
                   break;
                default:
@@ -635,6 +648,10 @@ namespace JourneyOfThePrairieKing
 
       private void SpawnEnemy()
       {
+         var prob0 = 0.5f;
+         var prob1 = 0.35f;
+         var prob2 = 0.15f;
+
          var spawnPositions = new List<Vector2>()
          {
             // bottom
@@ -658,11 +675,22 @@ namespace JourneyOfThePrairieKing
             new (0.468f, -0.009f),
          };
 
-         for (int i = 0; i < spawnPositions.Count; i++)
+         var rand = new Random();
+         int enemiesCount = rand.Next(1, 6);
+         for (int i = 0; i < enemiesCount; i++)
          {
-            Enemy enemy = new Enemy((Enemy.EnemyType)(i % 3));
-            
-            enemy.Position = spawnPositions[i];
+            int typeI = 0;
+            double probType = rand.NextDouble();
+            if (probType < prob2)
+               typeI = 2;
+            else if (probType < prob2 + prob1)
+               typeI = 1;
+            else if (probType < prob2 + prob1 + prob0)
+               typeI = 0;
+
+            int posI = rand.Next(spawnPositions.Count);
+            Enemy enemy = new Enemy((Enemy.EnemyType)(typeI));
+            enemy.Position = spawnPositions[posI];
 
             _enemies.Add(enemy);
          }

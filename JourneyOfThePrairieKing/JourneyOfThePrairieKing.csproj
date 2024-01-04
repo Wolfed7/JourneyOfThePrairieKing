@@ -23,6 +23,9 @@
     <None Update="data\textures\digits.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <None Update="data\textures\enemy1.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Update="data\textures\level1.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
@@ -60,9 +63,6 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Update="data\textures\projectile1.png">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Update="data\textures\enemy1.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Update="data\textures\char1.png">

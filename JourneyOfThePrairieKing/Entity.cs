@@ -106,8 +106,8 @@ namespace JourneyOfThePrairieKing
       public enum EnemyType
       {
          Log,
+         Ghost,
          Knight,
-         Ghost
       }
 
       private VertexPositionTexture[] _vertices;
