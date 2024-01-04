@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace JourneyOfThePrairieKing
 {
-   public class CharacterInterface
+   public class MainInterface
    {
       #region HitPoints
 
@@ -32,13 +32,27 @@ namespace JourneyOfThePrairieKing
 
       #endregion
 
-      public CharacterInterface()
+      #region Screens
+
+      private VertexPositionTexture[] _verticesScreen;
+      private VertexBufferObject _vboScreen;
+      private VertexArrayObject _vaoScreen;
+
+      public Vector2 SizeScreen { get; init; }
+      public Vector2 PositionScreen { get; init; }
+
+      #endregion
+
+      public MainInterface()
       {
          SizeHitpoints = new Vector2(64.0f / 1920, 128.0f / 1080);
          PositionHitpoints = new Vector2(-0.7f, 0.8f);
 
          SizeDigit = new Vector2(32.0f / 1920, 64.0f / 1080);
          PositionDigit = new Vector2(-0.7f, 0.7f);
+
+         SizeScreen = new Vector2(1000.0f / 1920 * 2.0f, 1000.0f / 1080 * 2.0f);
+         PositionScreen = new Vector2(-0.5f, -0.95f);
 
          _verticesHitpoints = new VertexPositionTexture[]
          {
@@ -91,6 +105,24 @@ namespace JourneyOfThePrairieKing
          _vaoNumX[0] = new VertexArrayObject();
          _vaoNumX[0].Bind();
 
+
+
+
+         _verticesScreen = new VertexPositionTexture[]
+         {
+            new (new Vector2(0, 0), new Vector2(0.0f, 0.0f)),
+            new (new Vector2(SizeScreen.X, 0), new Vector2(1.0f, 0.0f)),
+            new (new Vector2(0, SizeScreen.Y), new Vector2(0.0f, 1.0f)),
+            new (new Vector2(SizeScreen.X, SizeScreen.Y), new Vector2(1.0f, 1.0f))
+         };
+
+
+         _vboScreen = new VertexBufferObject(_verticesScreen, BufferUsageHint.StreamDraw);
+         _vboScreen.Bind();
+
+         _vaoScreen = new VertexArrayObject();
+         _vaoScreen.Bind();
+
       }
 
       public void DrawHitPoints()
@@ -106,6 +138,12 @@ namespace JourneyOfThePrairieKing
 
          _vaoNumX[digit].Bind();
          GL.DrawArrays(PrimitiveType.TriangleStrip, 0, _verticesNumX[digit].Length);
+      }
+
+      public void DrawScreen()
+      {
+         _vaoScreen.Bind();
+         GL.DrawArrays(PrimitiveType.TriangleStrip, 0, _verticesScreen.Length);
       }
    }
 }

@@ -38,7 +38,7 @@ namespace JourneyOfThePrairieKing
 
       private Shader _textureShader;
       private Character _mainCharacter;
-      private CharacterInterface _charInterface;
+      private MainInterface _charInterface;
 
       private HashSet<Enemy> _enemies;
       private HashSet<Projectile> _projectiles;
@@ -164,24 +164,24 @@ namespace JourneyOfThePrairieKing
          deltaTime = (float)Math.Min(deltaTime, _maxDeltaTime);
          deltaTime = (float)Math.Max(deltaTime, _minDeltaTime);
 
-         //foreach (var enemy1 in _enemies)
-         //{
-         //   var prevPos = enemy1.Position;
-         //   var distanceToChar = _mainCharacter.Position - enemy1.Position;
-         //   distanceToChar.Normalize();
-         //   enemy1.Position += _gameSpeed * enemy1.Velocity * WinRatio * distanceToChar * deltaTime;
+         foreach (var enemy1 in _enemies)
+         {
+            var prevPos = enemy1.Position;
+            var distanceToChar = _mainCharacter.Position - enemy1.Position;
+            distanceToChar.Normalize();
+            enemy1.Position += _gameSpeed * enemy1.Velocity * WinRatio * distanceToChar * deltaTime;
 
-         //   foreach (var enemy2 in _enemies.Where(_ => _ != enemy1))
-         //   {
-         //      if (Entity.CheckCollision(enemy1, enemy2) is true)
-         //      {
-         //         var vecToEnemy2 = enemy2.Position - enemy1.Position;
-         //         vecToEnemy2.Normalize();
-         //         enemy1.Position -= 2.0f * _gameSpeed * enemy1.Velocity * WinRatio * vecToEnemy2 * deltaTime;
-         //         //break;
-         //      }
-         //   }
-         //}
+            foreach (var enemy2 in _enemies.Where(_ => _ != enemy1))
+            {
+               if (Entity.CheckCollision(enemy1, enemy2) is true)
+               {
+                  var vecToEnemy2 = enemy2.Position - enemy1.Position;
+                  vecToEnemy2.Normalize();
+                  enemy1.Position -= 2.0f * _gameSpeed * enemy1.Velocity * WinRatio * vecToEnemy2 * deltaTime;
+                  //break;
+               }
+            }
+         }
 
          var previousPosiiton = _mainCharacter.Position;
 
@@ -419,27 +419,6 @@ namespace JourneyOfThePrairieKing
          }
          #endregion
 
-         #region Interface
-         {
-            var modelMatrixHP = Matrix4.CreateTranslation(new Vector3(_charInterface.PositionHitpoints.X, _charInterface.PositionHitpoints.Y, 0.0f));
-
-            _textureShader.SetMatrix4("model", modelMatrixHP);
-
-            _textures["hitpoint"].Use(TextureUnit.Texture1);
-            _textureShader.SetInt("textureMap", 1);
-            _charInterface.DrawHitPoints();
-
-
-            var modelMatrixDigit = Matrix4.CreateTranslation(new Vector3(_charInterface.PositionDigit.X, _charInterface.PositionDigit.Y, 0.0f));
-
-            _textureShader.SetMatrix4("model", modelMatrixDigit);
-
-            _textures["digits"].Use(TextureUnit.Texture1);
-            _textureShader.SetInt("textureMap", 1);
-            _charInterface.DrawDigit(_mainCharacter.HitPoints);
-         }
-         #endregion
-
 
          foreach (var obstacle in _boundaryObstacles)
          {
@@ -464,6 +443,54 @@ namespace JourneyOfThePrairieKing
             _charInterface.DrawHitPoints();
          }
          #endregion
+
+         #region Interface
+         {
+            var modelMatrixHP = Matrix4.CreateTranslation(new Vector3(_charInterface.PositionHitpoints.X, _charInterface.PositionHitpoints.Y, 0.0f));
+
+            _textureShader.SetMatrix4("model", modelMatrixHP);
+
+            _textures["hitpoint"].Use(TextureUnit.Texture1);
+            _textureShader.SetInt("textureMap", 1);
+            _charInterface.DrawHitPoints();
+
+
+            var modelMatrixDigit = Matrix4.CreateTranslation(new Vector3(_charInterface.PositionDigit.X, _charInterface.PositionDigit.Y, 0.0f));
+
+            _textureShader.SetMatrix4("model", modelMatrixDigit);
+
+            _textures["digits"].Use(TextureUnit.Texture1);
+            _textureShader.SetInt("textureMap", 1);
+            _charInterface.DrawDigit(_mainCharacter.HitPoints);
+
+            string screenType = string.Empty;
+            switch (_gameState)
+            {
+               case GameState.Start:
+                  screenType = "start";
+                  break;
+               case GameState.Run:
+                  screenType = "invisible_obstacle";
+                  break;
+               case GameState.Pause:
+                  screenType = "pause";
+                  break;
+               case GameState.GameOver:
+                  screenType = "gameover";
+                  break;
+            }
+
+            var modelMatrixScreen = Matrix4.CreateTranslation(new Vector3(_charInterface.PositionScreen.X, _charInterface.PositionScreen.Y, 0.0f));
+
+            _textureShader.SetMatrix4("model", modelMatrixScreen);
+
+            _textures[screenType].Use(TextureUnit.Texture1);
+            _textureShader.SetInt("textureMap", 1);
+            _charInterface.DrawScreen();
+         }
+         #endregion
+
+
 
          SwapBuffers();
          base.OnRenderFrame(args);
@@ -538,9 +565,9 @@ namespace JourneyOfThePrairieKing
             new (0.084f, -0.93f),
 
             // left
-            new (-0.45f, 0.0f),
-            new (-0.45f, -0.1f),
-            new (-0.45f, 0.1f),
+            new (-0.48f, -0.239f),
+            new (-0.48f, -0.121f),
+            new (-0.48f, -0.009f),
 
             // up
             new (-0.043f, 0.78f),
@@ -548,9 +575,9 @@ namespace JourneyOfThePrairieKing
             new (0.084f, 0.78f),
 
             // right
-            new (0.42f, 0.0f),
-            new (0.42f, -0.1f),
-            new (0.42f, 0.1f),
+            new (0.468f, -0.239f),
+            new (0.468f, -0.121f),
+            new (0.468f, -0.009f),
          };
 
          for (int i = 0; i < spawnPositions.Count; i++)
