@@ -58,6 +58,12 @@ namespace JourneyOfThePrairieKing
             isTimeEnds = true;
       }
 
+      public void Reset()
+      {
+         _timeRemains = LevelPlaytime;
+         isTimeEnds = false;
+      }
+
       public float ViewScale()
       {
          return (float)_timeRemains / LevelPlaytime;

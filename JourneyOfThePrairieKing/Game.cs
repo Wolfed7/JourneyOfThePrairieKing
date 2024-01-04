@@ -17,6 +17,7 @@ namespace JourneyOfThePrairieKing
       Run,
       Pause,
       GameOver,
+      Win,
    };
 
    public class Game : GameWindow
@@ -28,6 +29,8 @@ namespace JourneyOfThePrairieKing
       private const double _minDeltaTime = 1.0 / 120.0;
 
       #endregion
+
+      private bool enemySpawnAllowed;
 
       private Vector2 WinRatio;
       private int _currentLevel;
@@ -42,6 +45,8 @@ namespace JourneyOfThePrairieKing
 
       private HashSet<Enemy> _enemies;
       private HashSet<Projectile> _projectiles;
+      private HashSet<Bonus> _bonuses;
+
       private HashSet<Obstacle> _boundaryObstacles;
       private List<Level> _levels;
 
@@ -88,7 +93,11 @@ namespace JourneyOfThePrairieKing
          _mainCharacter = new Character();
          _enemies = new HashSet<Enemy>();
          _projectiles = new HashSet<Projectile>();
+         _bonuses = new HashSet<Bonus>();
+
          _levels = new List<Level>();
+
+         enemySpawnAllowed = true;
 
          {
             _boundaryObstacles = new HashSet<Obstacle>
@@ -126,12 +135,12 @@ namespace JourneyOfThePrairieKing
          foreach (string filepath in allfiles)
          {
             _textures.Add(Path.GetFileNameWithoutExtension(filepath), Texture.LoadFromFile(filepath));
-            Console.WriteLine(Path.GetFileName(filepath));
+            Console.WriteLine($"{Path.GetFileName(filepath)} loaded.");
          }
 
          _levels.Add(new Level(new Vector2(ClientSize.X / 2.0f / ClientSize.X - 1.0f, -0.95f), new Vector2((ClientSize.Y - 80.0f) / ClientSize.X * 2.0f, (ClientSize.Y - 80.0f) / ClientSize.Y * 2.0f)));
 
-         _levelTimer = new Timer(120000, new Vector2(-0.5f, 0.95f), new Vector2((ClientSize.Y - 80.0f) / ClientSize.X * 2.0f, 0.02f));
+         _levelTimer = new Timer(1200, new Vector2(-0.5f, 0.95f), new Vector2((ClientSize.Y - 80.0f) / ClientSize.X * 2.0f, 0.02f));
 
          WinRatio = new Vector2(ClientSize.Y, ClientSize.X);
          WinRatio.Normalize();
@@ -147,11 +156,21 @@ namespace JourneyOfThePrairieKing
 
       protected override void OnUpdateFrame(FrameEventArgs args)
       {
-         if (_gameState is GameState.Pause
-            || _gameState is GameState.Start
-            || _gameState is GameState.GameOver)
+         if (_gameState is not GameState.Run)
          {
             return;
+         }
+
+         if (_levelTimer.isTimeEnds is true)
+         {
+            if (enemySpawnAllowed is true)
+               enemySpawnAllowed = false;
+
+            if (_enemies.Count == 0)
+            {
+               _gameState = GameState.Win;
+               return;
+            }
          }
 
 
@@ -185,10 +204,16 @@ namespace JourneyOfThePrairieKing
 
          var previousPosiiton = _mainCharacter.Position;
 
-         if (_enemies.Count < 3)
+         if (_enemies.Count < 3 && enemySpawnAllowed is true)
          {
             SpawnEnemy();
          }
+
+         if (_gameRuntime.ElapsedMilliseconds > 2000 && _bonuses.Count < 2)
+         {
+            SpawnBonuses();
+         }
+
 
          //Console.WriteLine(_enemies.Count);
 
@@ -239,6 +264,20 @@ namespace JourneyOfThePrairieKing
             }
          }
 
+         foreach (var bonus in _bonuses)
+         {
+            if (Entity.CheckCollision(_mainCharacter, bonus) is true)
+            {
+               if (_mainCharacter.HitPoints < 9)
+               {
+                  _mainCharacter.HitPoints++;
+                  _bonuses.Remove(bonus);
+               }
+
+               //Console.WriteLine("Collision with bonus!");
+            }
+         }
+
          foreach (var enemy in _enemies)
          {
             if(Entity.CheckCollision(_mainCharacter, enemy) is true)
@@ -248,7 +287,8 @@ namespace JourneyOfThePrairieKing
                {
                   _gameState = GameState.GameOver;
                }
-               //Console.WriteLine("Collision!");
+
+               //Console.WriteLine("Collision with enemy!");
             }
          }
 
@@ -434,13 +474,16 @@ namespace JourneyOfThePrairieKing
 
          #region Bonuses
          {
-            var modelMatrixHP = Matrix4.CreateTranslation(new Vector3(0.22f, 0.44f, 0.0f));
-            var scaleMatrix = Matrix4.CreateScale(new Vector3(0.6f, 0.6f, 1.0f));
-            _textureShader.SetMatrix4("model", scaleMatrix * modelMatrixHP);
+            foreach (var bonus in _bonuses)
+            {
+               var modelMatrix = Matrix4.CreateTranslation(new Vector3(bonus.Position.X, bonus.Position.Y, 0.0f));
 
-            _textures["hitpoint"].Use(TextureUnit.Texture1);
-            _textureShader.SetInt("textureMap", 1);
-            _charInterface.DrawHitPoints();
+               _textureShader.SetMatrix4("model", modelMatrix);
+
+               _textures["hitpoint"].Use(TextureUnit.Texture1);
+               _textureShader.SetInt("textureMap", 1);
+               bonus.Draw();
+            }
          }
          #endregion
 
@@ -477,6 +520,9 @@ namespace JourneyOfThePrairieKing
                   break;
                case GameState.GameOver:
                   screenType = "gameover";
+                  break;
+               case GameState.Win:
+                  screenType = "win";
                   break;
             }
 
@@ -525,9 +571,41 @@ namespace JourneyOfThePrairieKing
 
          if (e.Key is Keys.Enter)
          {
-            if (_gameState is GameState.Start)
+            switch (_gameState)
             {
-               _gameState = GameState.Run;
+               case GameState.Start:
+                  _gameState = GameState.Run;
+                  break;
+
+               case GameState.Run:
+                  _gameState = GameState.Pause;
+                  break;
+
+               case GameState.Pause:
+                  _gameState = GameState.Run;
+                  break;
+
+               case GameState.GameOver:
+                  _projectiles.Clear();
+                  _enemies.Clear();
+                  _mainCharacter.Reset();
+                  _bonuses.Clear();
+                  _levelTimer.Reset();
+                  enemySpawnAllowed = true;
+                  _gameState = GameState.Run;
+                  break;
+
+               case GameState.Win:
+                  _projectiles.Clear();
+                  _enemies.Clear();
+                  _mainCharacter.Reset();
+                  _bonuses.Clear();
+                  _levelTimer.Reset();
+                  enemySpawnAllowed = true;
+                  _gameState = GameState.Run;
+                  break;
+               default:
+                  break;
             }
          }
 
@@ -588,6 +666,24 @@ namespace JourneyOfThePrairieKing
 
             _enemies.Add(enemy);
          }
+      }
+
+      private void SpawnBonuses()
+      {
+         Random random = new Random();
+         float min = -0.4f;
+         float max = 0.4f;
+         float step = 0.03f;
+
+         int totalCount = (int)((max - min) / step + 1);
+
+         float posX = min + random.Next(0, totalCount) * step;
+         float posY = min + random.Next(0, totalCount) * step;
+
+         var posVec = new Vector2(posX, posY);
+         var sizeVec = new Vector2(40.0f / ClientSize.X, 80.0f / ClientSize.Y);
+
+         _bonuses.Add(new Bonus(posVec, sizeVec));
       }
    }
 }
