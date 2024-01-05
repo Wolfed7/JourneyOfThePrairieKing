@@ -1,4 +1,5 @@
-﻿using OpenTK.Graphics.OpenGL4;
+﻿using CG_PR3;
+using OpenTK.Graphics.OpenGL4;
 using OpenTK.Mathematics;
 using System;
 using System.Collections.Generic;
@@ -64,15 +65,23 @@ namespace JourneyOfThePrairieKing
          isTimeEnds = false;
       }
 
-      public float ViewScale()
+      public void Render(Shader shader, Texture texture)
       {
-         return (float)_timeRemains / LevelPlaytime;
+         var modelMatrix = Matrix4.CreateTranslation(new Vector3(Position.X, Position.Y, 0.0f));
+         var scaleMatrix = Matrix4.CreateScale(new Vector3(ViewScale(), 1.0f, 1.0f));
+
+         shader.SetMatrix4("model", scaleMatrix * modelMatrix);
+
+         texture.Use(TextureUnit.Texture0);
+         shader.SetInt("textureMap", 0);
+
+         _vao.Bind();
+         GL.DrawArrays(PrimitiveType.TriangleStrip, 0, 4);
       }
 
-      public void Draw()
+      private float ViewScale()
       {
-         _vao.Bind();
-         GL.DrawArrays(PrimitiveType.TriangleStrip, 0, _vertices.Length);
+         return (float)_timeRemains / LevelPlaytime;
       }
    }
 }

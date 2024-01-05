@@ -1,14 +1,16 @@
-﻿using OpenTK.Graphics.OpenGL4;
+﻿using CG_PR3;
+using OpenTK.Graphics.OpenGL4;
 using OpenTK.Mathematics;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace JourneyOfThePrairieKing
 {
-   public class MainInterface
+   public class Interface
    {
       #region HitPoints
 
@@ -32,6 +34,12 @@ namespace JourneyOfThePrairieKing
 
       #endregion
 
+      #region Coin counter
+
+      public Vector2 PositionCoinCounter { get; init; }
+
+      #endregion
+
       #region Screens
 
       private VertexPositionTexture[] _verticesScreen;
@@ -43,16 +51,18 @@ namespace JourneyOfThePrairieKing
 
       #endregion
 
-      public MainInterface()
+      public Interface(Vector2 mapSize, Vector2 mapPosition, Vector2 winSize)
       {
-         SizeHitpoints = new Vector2(64.0f / 1920, 128.0f / 1080);
-         PositionHitpoints = new Vector2(-0.7f, 0.8f);
+         SizeHitpoints = Coordinates.SizeInNDC(new Vector2(32, 64), winSize);
+         PositionHitpoints = Coordinates.PosInNDC(new Vector2(360, 900), winSize);
 
-         SizeDigit = new Vector2(32.0f / 1920, 64.0f / 1080);
-         PositionDigit = new Vector2(-0.7f, 0.7f);
+         SizeDigit = Coordinates.SizeInNDC(new Vector2(16, 32), winSize);
+         PositionDigit = Coordinates.PosInNDC(new Vector2(368, 860), winSize);
 
-         SizeScreen = new Vector2(1000.0f / 1920 * 2.0f, 1000.0f / 1080 * 2.0f);
-         PositionScreen = new Vector2(-0.5f, -0.95f);
+         PositionCoinCounter = Coordinates.PosInNDC(new Vector2(368, 760), winSize);
+
+         SizeScreen = mapSize;
+         PositionScreen = mapPosition;
 
          _verticesHitpoints = new VertexPositionTexture[]
          {
@@ -62,7 +72,7 @@ namespace JourneyOfThePrairieKing
             new (new Vector2(SizeHitpoints.X, SizeHitpoints.Y), new Vector2(1.0f, 1.0f))
          };
 
-         _vboHitpoints = new VertexBufferObject(_verticesHitpoints, BufferUsageHint.StreamDraw);
+         _vboHitpoints = new VertexBufferObject(_verticesHitpoints, BufferUsageHint.StaticDraw);
          _vboHitpoints.Bind();
 
          _vaoHitpoints = new VertexArrayObject();
@@ -72,7 +82,7 @@ namespace JourneyOfThePrairieKing
          _vboNumX = new VertexBufferObject[10];
          _vaoNumX = new VertexArrayObject[10];
 
-         var sizeNumX = 1.0f / 10;
+         var sizeNumX = 1.0f / 10.0f;
          for (int i = 1; i < _verticesNumX.Length; i++)
          {
             _verticesNumX[i] = new VertexPositionTexture[]
@@ -116,34 +126,62 @@ namespace JourneyOfThePrairieKing
             new (new Vector2(SizeScreen.X, SizeScreen.Y), new Vector2(1.0f, 1.0f))
          };
 
-
          _vboScreen = new VertexBufferObject(_verticesScreen, BufferUsageHint.StreamDraw);
          _vboScreen.Bind();
 
          _vaoScreen = new VertexArrayObject();
          _vaoScreen.Bind();
-
       }
 
-      public void DrawHitPoints()
+      public void RenderHitpointIcon(Shader shader, Texture texture)
       {
-         _vaoHitpoints.Bind();
-         GL.DrawArrays(PrimitiveType.TriangleStrip, 0, _verticesHitpoints.Length);
+         Texture.DrawTexturedRectangle(shader, texture, PositionHitpoints, _vaoHitpoints);
       }
 
-      public void DrawDigit(int digit)
+      public void RenderHitpointCounter(Shader shader, Texture texture, int digit)
       {
-         if (digit < 0 || digit > 9)
-            return;
+         if (digit < 0)
+         {
+            digit = 0;
+         }
+         else if(digit > 9)
+         {
+            digit = 9;
+         }
 
-         _vaoNumX[digit].Bind();
-         GL.DrawArrays(PrimitiveType.TriangleStrip, 0, _verticesNumX[digit].Length);
+         Texture.DrawTexturedRectangle(shader, texture, PositionDigit, _vaoNumX[digit]);
       }
 
-      public void DrawScreen()
+      public void RenderScreen(Shader shader, Texture texture)
       {
-         _vaoScreen.Bind();
-         GL.DrawArrays(PrimitiveType.TriangleStrip, 0, _verticesScreen.Length);
+         Texture.DrawTexturedRectangle(shader, texture, PositionScreen, _vaoScreen);
       }
+
+      public void RenderCoinIcon(Shader shader, Texture texture)
+      {
+         Texture.DrawTexturedRectangle(shader, texture, PositionScreen, _vaoScreen);
+      }
+
+      public void RenderCoinCounter(Shader shader, Texture texture, int number)
+      {
+         int digit;
+         int res = number;
+         List<int> digits = new List<int>();
+
+         while (res != 0)
+         {
+            digit = res % 10;
+            digits.Add(digit);
+            res /= 10;
+         }
+
+         for (int i = 0; i < digits.Count; i++)
+         {
+            var position = PositionCoinCounter + new Vector2((float)(i * SizeDigit.X), 0);
+            Texture.DrawTexturedRectangle(shader, texture, position, _vaoNumX[digits[i]]);
+         }
+      }
+
+
    }
 }
