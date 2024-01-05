@@ -34,6 +34,17 @@ namespace JourneyOfThePrairieKing
 
       #endregion
 
+      #region coin Icon
+
+      private VertexPositionTexture[] _verticesCoin;
+      private VertexBufferObject _vboCoin;
+      private VertexArrayObject _vaoCoin;
+
+      public Vector2 SizeCoin { get; init; }
+      public Vector2 PositionCoin { get; init; }
+
+      #endregion
+
       #region Coin counter
 
       public Vector2 PositionCoinCounter { get; init; }
@@ -59,6 +70,9 @@ namespace JourneyOfThePrairieKing
          SizeDigit = Coordinates.SizeInNDC(new Vector2(16, 32), winSize);
          PositionDigit = Coordinates.PosInNDC(new Vector2(368, 860), winSize);
 
+         SizeCoin = Coordinates.SizeInNDC(new Vector2(32, 32), winSize);
+         PositionCoin = Coordinates.PosInNDC(new Vector2(360, 800), winSize);
+
          PositionCoinCounter = Coordinates.PosInNDC(new Vector2(368, 760), winSize);
 
          SizeScreen = mapSize;
@@ -77,6 +91,21 @@ namespace JourneyOfThePrairieKing
 
          _vaoHitpoints = new VertexArrayObject();
          _vaoHitpoints.Bind();
+
+
+         _verticesCoin = new VertexPositionTexture[]
+         {
+            new (new Vector2(0, 0), new Vector2(0.0f, 0.0f)),
+            new (new Vector2(SizeCoin.X, 0), new Vector2(1.0f, 0.0f)),
+            new (new Vector2(0, SizeCoin.Y), new Vector2(0.0f, 1.0f)),
+            new (new Vector2(SizeCoin.X, SizeCoin.Y), new Vector2(1.0f, 1.0f))
+         };
+
+         _vboCoin = new VertexBufferObject(_verticesCoin, BufferUsageHint.StaticDraw);
+         _vboCoin.Bind();
+
+         _vaoCoin = new VertexArrayObject();
+         _vaoCoin.Bind();
 
          _verticesNumX = new VertexPositionTexture[10][];
          _vboNumX = new VertexBufferObject[10];
@@ -159,7 +188,7 @@ namespace JourneyOfThePrairieKing
 
       public void RenderCoinIcon(Shader shader, Texture texture)
       {
-         Texture.DrawTexturedRectangle(shader, texture, PositionScreen, _vaoScreen);
+         Texture.DrawTexturedRectangle(shader, texture, PositionCoin, _vaoCoin);
       }
 
       public void RenderCoinCounter(Shader shader, Texture texture, int number)
@@ -175,9 +204,12 @@ namespace JourneyOfThePrairieKing
             res /= 10;
          }
 
-         for (int i = 0; i < digits.Count; i++)
+         if (number == 0)
+            digits.Add(0);
+
+         for (int i = digits.Count - 1; i >= 0; i--)
          {
-            var position = PositionCoinCounter + new Vector2((float)(i * SizeDigit.X), 0);
+            var position = PositionCoinCounter + new Vector2((float)((digits.Count - i  - 1) * SizeDigit.X), 0);
             Texture.DrawTexturedRectangle(shader, texture, position, _vaoNumX[digits[i]]);
          }
       }

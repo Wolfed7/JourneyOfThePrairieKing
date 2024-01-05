@@ -4,6 +4,7 @@ using OpenTK.Mathematics;
 using OpenTK.Windowing.Common;
 using OpenTK.Windowing.Desktop;
 using OpenTK.Windowing.GraphicsLibraryFramework;
+using System.ComponentModel.Design;
 using System.Diagnostics;
 using System.Threading;
 
@@ -40,6 +41,7 @@ namespace JourneyOfThePrairieKing
 
       private bool _enemySpawnAllowed;
       private long _enemyLastSpawnTime;
+      private Bonus? _lastCollectedBonus;
 
       private Timer _levelTimer;
 
@@ -141,6 +143,8 @@ namespace JourneyOfThePrairieKing
          Vector2 characterSize = Coordinates.SizeInNDC(new Vector2(62, 62), _winSize);
          _character = new Character(characterSize, -characterSize / 2);
          _interface = new Interface(MapSize, MapPosition, _winSize);
+
+         _lastCollectedBonus = null;
       }
 
       public void Update(FrameEventArgs args, Vector2 moveDir, Vector2 projectileDir, ref Stopwatch gameRunTime, ref GameState gameState)
@@ -201,11 +205,42 @@ namespace JourneyOfThePrairieKing
          {
             if (Entity.CheckCollision(_character, bonus) is true)
             {
-               if (_character.HitPoints < 9)
+               if (bonus.Duration != 0)
+                  _lastCollectedBonus = bonus;
+               
+               switch (bonus.Type)
                {
-                  _character.HitPoints++;
-                  _bonuses.Remove(bonus);
+                  case Bonus.BonusType.Wheel:
+                     _bonuses.Remove(bonus);
+                     break;
+
+                  case Bonus.BonusType.ShotGun:
+                     _bonuses.Remove(bonus);
+                     break;
+
+                  case Bonus.BonusType.Nuke:
+                     _enemies.Clear();
+                     _bonuses.Remove(bonus);
+                     break;
+
+                  case Bonus.BonusType.HitPoint:
+                     if (_character.HitPoints < 9)
+                     {
+                        _character.HitPoints++;
+                        _bonuses.Remove(bonus);
+                     }
+                     break;
+
+                  case Bonus.BonusType.Coin:
+                     if (_character.CoinsCount < 99)
+                     {
+                        _character.GotCoin(1);
+                        _bonuses.Remove(bonus);
+                     }
+                     break;
                }
+
+              
                //Console.WriteLine("Collision with bonus!");
             }
          }
@@ -256,7 +291,7 @@ namespace JourneyOfThePrairieKing
             if (projectileDir.X != 0.0f || projectileDir.Y != 0.0f)
             {
                projectileDir.Normalize();
-               SpawnProjectile(_character.Position, projectileDir);
+               SpawnProjectile(_character.Position, projectileDir, (long)(args.Time * 1000));
                _character.LastShotTime = gameRunTime.ElapsedMilliseconds;
             }
          }
@@ -291,7 +326,7 @@ namespace JourneyOfThePrairieKing
                   enemy.GotDamage(projectile.Damage);
                   if (enemy.HitPoints <= 0)
                   {
-                     SpawnBonus();
+                     SpawnBonus(enemy.Position + enemy.Size / 2.0f);
                      _enemies.Remove(enemy);
                   }
                   _projectiles.Remove(projectile);
@@ -367,8 +402,34 @@ namespace JourneyOfThePrairieKing
             foreach (var bonus in _bonuses)
             {
                // switch bonustype
+               switch (bonus.Type)
+               {
+                  case Bonus.BonusType.Wheel:
+                     texture = _textures["wheel"];
+                     break;
 
-               texture = _textures["hitpoint"];
+                  case Bonus.BonusType.ShotGun:
+                     texture = _textures["shotgun"];
+                     break;
+
+                  case Bonus.BonusType.Nuke:
+                     texture = _textures["nuke"];
+                     break;
+
+                  case Bonus.BonusType.HitPoint:
+                     texture = _textures["hitpoint"];
+                     break;
+
+                  case Bonus.BonusType.Coin:
+                     texture = _textures["coin"];
+                     break;
+
+                  default:
+                     texture = _textures["coin"];
+                     break;
+               }
+
+               
                bonus.Render(_textureShader, texture);
             }
          }
@@ -378,8 +439,8 @@ namespace JourneyOfThePrairieKing
          // Interface objects
          _interface.RenderHitpointIcon(_textureShader, _textures["hitpoint"]);
          _interface.RenderHitpointCounter(_textureShader, _textures["digits"], _character.HitPoints);
-
-         _interface.RenderCoinCounter(_textureShader, _textures["digits"], 88);
+         _interface.RenderCoinIcon(_textureShader, _textures["coin"]);
+         _interface.RenderCoinCounter(_textureShader, _textures["digits"], _character.CoinsCount);
 
          {
             Texture texture;
@@ -414,13 +475,13 @@ namespace JourneyOfThePrairieKing
       }
 
 
-      private void SpawnProjectile(Vector2 position, Vector2 direction)
+      private void SpawnProjectile(Vector2 position, Vector2 direction, long ellapsedMilliSec)
       {
          Vector2 projectileSize = Coordinates.SizeInNDC(new Vector2(16, 16), _winSize);
 
-         _projectiles.Add(new Projectile(projectileSize, position, direction, 1));
 
-         if (false)
+         if (_lastCollectedBonus?.Type == Bonus.BonusType.Wheel 
+            && _lastCollectedBonus?.IsDurationEnded(ellapsedMilliSec) is false) // wheel
          {
             for (int i = -1; i < 2; i++)
             {
@@ -431,6 +492,22 @@ namespace JourneyOfThePrairieKing
                   _projectiles.Add(new Projectile(projectileSize, position, direction, 1));
                }
             }
+         }
+
+         else if (_lastCollectedBonus?.Type == Bonus.BonusType.ShotGun 
+                  && _lastCollectedBonus?.IsDurationEnded(ellapsedMilliSec) is false) // shotgun
+         {
+            Vector2 rotatedDirection;
+            _projectiles.Add(new Projectile(projectileSize, position, direction, 1));
+            rotatedDirection = Matrix2.CreateRotation((float)Math.PI / 9) * direction;
+            _projectiles.Add(new Projectile(projectileSize, position, rotatedDirection, 1));
+            rotatedDirection = Matrix2.CreateRotation(-(float)Math.PI / 9) * direction;
+            _projectiles.Add(new Projectile(projectileSize, position, rotatedDirection, 1));
+         }
+
+         else
+         {
+            _projectiles.Add(new Projectile(projectileSize, position, direction, 1));
          }
       }
 
@@ -471,11 +548,11 @@ namespace JourneyOfThePrairieKing
          {
             int typeI = 0;
             double probType = rand.NextDouble();
-            if (probType < prob2)
+            if (probType < prob2) // knight
                typeI = 2;
-            else if (probType < prob2 + prob1)
+            else if (probType < prob2 + prob1) // log
                typeI = 1;
-            else if (probType < prob2 + prob1 + prob0)
+            else if (probType < prob2 + prob1 + prob0) // ghost
                typeI = 0;
 
             int posI = rand.Next(spawnPositions.Count);
@@ -485,22 +562,59 @@ namespace JourneyOfThePrairieKing
          }
       }
 
-      private void SpawnBonus()
+      private void SpawnBonus(Vector2 position)
       {
-         Random random = new Random();
-         float min = -0.4f;
-         float max = 0.4f;
-         float step = 0.03f;
+         var rand = new Random();
+         var prob = 0.9f;
+         if (rand.NextDouble() > prob)
+         {
+            return;
+         }
 
-         int totalCount = (int)((max - min) / step + 1);
+         var prob0 = 0.5f; // coin
+         var prob1 = 0.3f; // shotgun
+         var prob2 = 0.15f; // wheel
+         var prob3 = 0.1f; // life
+         var prob4 = 0.05f; // bomb
 
-         float posX = min + random.Next(0, totalCount) * step;
-         float posY = min + random.Next(0, totalCount) * step;
+         
+         Bonus.BonusType bonusType = Bonus.BonusType.Coin;
+         long Duration = 0;
+         double probType = rand.NextDouble();
+         var sizeVec = Coordinates.SizeInNDC(new Vector2(24, 24), _winSize);
+         if (probType < prob4) // nuke
+         {
+            bonusType = Bonus.BonusType.Nuke;
+            sizeVec = Coordinates.SizeInNDC(new Vector2(32, 32), _winSize);
+         }
 
-         var posVec = new Vector2(posX, posY);
-         var sizeVec = Coordinates.SizeInNDC(new Vector2(24, 48), _winSize);
+         else if (probType < prob4 + prob3) // life
+         {
+            bonusType = Bonus.BonusType.HitPoint;
+            sizeVec = Coordinates.SizeInNDC(new Vector2(24, 48), _winSize);
+         }
+         else if (probType < prob4 + prob3 + prob2) // wheel
+         {
+            bonusType = Bonus.BonusType.Wheel;
+            Duration = 5000;
+            sizeVec = Coordinates.SizeInNDC(new Vector2(32, 32), _winSize);
+         }
 
-         _bonuses.Add(new Bonus(posVec, sizeVec));
+         else if (probType < prob4 + prob3 + prob2 + prob1) // shotgun
+         {
+            bonusType = Bonus.BonusType.ShotGun;
+            Duration = 8000;
+            sizeVec = Coordinates.SizeInNDC(new Vector2(72, 24), _winSize);
+
+         }
+         else if (probType < prob4 + prob3 + prob2 + prob1 + prob0) // coin
+         {
+            bonusType = Bonus.BonusType.Coin;
+            sizeVec = Coordinates.SizeInNDC(new Vector2(24, 24), _winSize);
+         }
+
+         Bonus bonus = new Bonus(position, sizeVec, bonusType, Duration);
+         _bonuses.Add(bonus);
       }
    }
 }

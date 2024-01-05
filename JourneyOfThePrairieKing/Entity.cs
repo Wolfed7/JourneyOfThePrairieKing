@@ -3,6 +3,7 @@ using OpenTK.Graphics.OpenGL4;
 using OpenTK.Mathematics;
 using OpenTK.Windowing.Desktop;
 using System.Drawing;
+using System.Security.Cryptography.X509Certificates;
 using static JourneyOfThePrairieKing.Projectile;
 using static System.Reflection.Metadata.BlobBuilder;
 
@@ -144,7 +145,7 @@ namespace JourneyOfThePrairieKing
 
       public void GotCoin(int count)
       {
-         if (CoinsCount > 0)
+         if (count > 0)
          {
             CoinsCount += count;
 
@@ -342,6 +343,7 @@ namespace JourneyOfThePrairieKing
          ShotGun,
          Nuke,
          HitPoint,
+         Coin,
       }
 
       private VertexPositionTexture[] _vertices;
@@ -350,11 +352,18 @@ namespace JourneyOfThePrairieKing
 
       public override Vector2 Size { get; protected set; }
       public override Vector2 Position { get; protected set; }
+      public long Duration { get; init; }
+      public long RemainDuration {  get; private set; }
 
-      public Bonus(Vector2 position, Vector2 size)
+      public BonusType Type { get; init; }
+
+      public Bonus(Vector2 position, Vector2 size, BonusType bonusType, long bonusDuration)
       {
          Position = position;
          Size = size;
+         Type = bonusType;
+         Duration = bonusDuration;
+         RemainDuration = bonusDuration;
 
          _vertices = new VertexPositionTexture[]
          {
@@ -371,6 +380,14 @@ namespace JourneyOfThePrairieKing
          _vao.Bind();
       }
 
+      public bool IsDurationEnded (long EllapsedMilliSec)
+      {
+         bool isEnded = false;
+         RemainDuration -= EllapsedMilliSec;
+         if (RemainDuration <= 0)
+            isEnded = true;
+         return isEnded;
+      }
       public void Render(Shader shader, Texture texture)
       {
          Texture.DrawTexturedRectangle(shader, texture, Position, _vao);
