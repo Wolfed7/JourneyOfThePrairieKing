@@ -253,7 +253,7 @@ namespace JourneyOfThePrairieKing
       public override Vector2 Size { get; protected set; }
       public override Vector2 Position { get; protected set; }
 
-      private float _defaultVelocity = 0.00125f;
+      private float _defaultVelocity = 0.2f;
 
       public int Damage { get; }
       public Vector2 Direction { get; }
@@ -345,6 +345,9 @@ namespace JourneyOfThePrairieKing
          HitPoint,
          Coin,
       }
+      private long _remainDuration;
+      private long _remainTTL;
+
 
       private VertexPositionTexture[] _vertices;
       private VertexBufferObject _vbo;
@@ -353,17 +356,17 @@ namespace JourneyOfThePrairieKing
       public override Vector2 Size { get; protected set; }
       public override Vector2 Position { get; protected set; }
       public long Duration { get; init; }
-      public long RemainDuration {  get; private set; }
-
+      public long TTL { get; init; }
       public BonusType Type { get; init; }
 
-      public Bonus(Vector2 position, Vector2 size, BonusType bonusType, long bonusDuration)
+      public Bonus(Vector2 position, Vector2 size, BonusType bonusType, long bonusDuration, long TTL)
       {
          Position = position;
          Size = size;
          Type = bonusType;
          Duration = bonusDuration;
-         RemainDuration = bonusDuration;
+         _remainDuration = bonusDuration;
+         _remainTTL = TTL;
 
          _vertices = new VertexPositionTexture[]
          {
@@ -383,11 +386,27 @@ namespace JourneyOfThePrairieKing
       public bool IsDurationEnded (long EllapsedMilliSec)
       {
          bool isEnded = false;
-         RemainDuration -= EllapsedMilliSec;
-         if (RemainDuration <= 0)
+         _remainDuration -= EllapsedMilliSec;
+         if (_remainDuration <= 0)
             isEnded = true;
          return isEnded;
       }
+
+      public bool IsTTLEnded(long EllapsedMilliSec)
+      {
+         bool isEnded = false;
+         _remainTTL -= EllapsedMilliSec;
+         if (_remainTTL <= 0)
+            isEnded = true;
+         return isEnded;
+      }
+
+      public void Dispose()
+      {
+         _vbo.Dispose();
+         _vao.Dispose();
+      }
+
       public void Render(Shader shader, Texture texture)
       {
          Texture.DrawTexturedRectangle(shader, texture, Position, _vao);

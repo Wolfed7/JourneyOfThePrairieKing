@@ -50,6 +50,7 @@ namespace JourneyOfThePrairieKing
 
       public void Update(long elapsedMilliseconds)
       {
+         //Console.WriteLine(_timeRemains);
          if (isTimeEnds is true)
             return;
          

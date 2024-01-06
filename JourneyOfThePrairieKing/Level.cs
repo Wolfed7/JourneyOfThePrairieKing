@@ -41,7 +41,7 @@ namespace JourneyOfThePrairieKing
 
       private bool _enemySpawnAllowed;
       private long _enemyLastSpawnTime;
-      private Bonus? _lastCollectedBonus;
+      private Bonus? _activeBonus;
 
       private Timer _levelTimer;
 
@@ -78,7 +78,8 @@ namespace JourneyOfThePrairieKing
          Shader textureShader,
          Vector2 winSize,
          Vector2 mapPosition,
-         Vector2 mapSize
+         Vector2 mapSize,
+         Character? character = null
          )
       {
          _winSize = winSize;
@@ -87,8 +88,8 @@ namespace JourneyOfThePrairieKing
          MapPosition = Coordinates.PosInNDC(mapPosition, winSize);
          MapSize = Coordinates.SizeInNDC(mapSize, winSize);
 
-         Console.WriteLine($"{MapSize.X} {MapSize.Y}");
-         Console.WriteLine($"{MapPosition.X} {MapPosition.Y}");
+         //Console.WriteLine($"{MapSize.X} {MapSize.Y}");
+         //Console.WriteLine($"{MapPosition.X} {MapPosition.Y}");
 
          _MapVertices = new VertexPositionTexture[]
          {
@@ -115,42 +116,63 @@ namespace JourneyOfThePrairieKing
          _enemies = new HashSet<Enemy>();
          _projectiles = new HashSet<Projectile>();
          _bonuses = new HashSet<Bonus>();
+
+
+         Vector2 tileSize = Coordinates.SizeInNDC(new(1000 / 16.0f, 1000 / 16.0f), winSize);
          _obstacles = new HashSet<Obstacle>();
+         _obstacles.Add(new Obstacle(MapPosition + new Vector2(4 * tileSize.X, 3 * tileSize.Y), tileSize));
+         _obstacles.Add(new Obstacle(MapPosition + new Vector2(9 * tileSize.X, 8 * tileSize.Y), tileSize));
 
-         _boundaryObstacles = new HashSet<Obstacle>
-         {
-               // up
-               new Obstacle(new Vector2(-0.5f, 0.8f), new Vector2(0.45f, 0.1f)),
-               new Obstacle(new Vector2(-0.05f, 0.89f), new Vector2(0.2f, 0.01f)),
-               new Obstacle(new Vector2(0.15f, 0.8f), new Vector2(0.4f, 0.1f)),
+         _boundaryObstacles = new HashSet<Obstacle>();
+         // bottom
+         for (int i = 0; i < 7; i++)
+            _boundaryObstacles.Add(new Obstacle(MapPosition + new Vector2(i * tileSize.X, 0), tileSize));
+         for (int i = 7; i < 10; i++)
+            _boundaryObstacles.Add(new Obstacle(MapPosition + new Vector2(i * tileSize.X, -tileSize.Y), tileSize));
+         for (int i = 10; i < 16; i++)
+            _boundaryObstacles.Add(new Obstacle(MapPosition + new Vector2(i * tileSize.X, 0), tileSize));
 
-               // left
-               new Obstacle(new Vector2(-0.5f, 0.1f), new Vector2(0.06f, 0.7f)),
-               new Obstacle(new Vector2(-0.5f, -0.25f), new Vector2(0.01f, 0.35f)),
-               new Obstacle(new Vector2(-0.5f, -0.85f), new Vector2(0.06f, 0.6f)),
+         // up
+         for (int i = 0; i < 7; i++)
+            _boundaryObstacles.Add(new Obstacle(MapPosition + new Vector2(i * tileSize.X, MapSize.Y - tileSize.Y), tileSize));
+         for (int i = 7; i < 10; i++)
+            _boundaryObstacles.Add(new Obstacle(MapPosition + new Vector2(i * tileSize.X, MapSize.Y), tileSize));
+         for (int i = 10; i < 16; i++)
+            _boundaryObstacles.Add(new Obstacle(MapPosition + new Vector2(i * tileSize.X, MapSize.Y - tileSize.Y), tileSize));
 
-               // bottom
-               new Obstacle(new Vector2(-0.5f, -0.95f), new Vector2(0.45f, 0.1f)),
-               new Obstacle(new Vector2(-0.05f, -0.95f), new Vector2(0.2f, 0.01f)),
-               new Obstacle(new Vector2(0.15f, -0.95f), new Vector2(0.4f, 0.1f)),
+         // left
+         for (int i = 1; i < 6; i++)
+            _boundaryObstacles.Add(new Obstacle(MapPosition + new Vector2(0, i * tileSize.Y), tileSize));
+         for (int i = 6; i < 9; i++)
+            _boundaryObstacles.Add(new Obstacle(MapPosition + new Vector2(-tileSize.X, i * tileSize.Y), tileSize));
+         for (int i = 9; i < 15; i++)
+            _boundaryObstacles.Add(new Obstacle(MapPosition + new Vector2(0, i * tileSize.Y), tileSize));
 
-               // right
-               new Obstacle(new Vector2(0.48f, 0.1f), new Vector2(0.06f, 0.7f)),
-               new Obstacle(new Vector2(0.53f, -0.25f), new Vector2(0.01f, 0.35f)),
-               new Obstacle(new Vector2(0.48f, -0.85f), new Vector2(0.06f, 0.6f)),
-         };
+         // right
+         for (int i = 1; i < 6; i++)
+            _boundaryObstacles.Add(new Obstacle(MapPosition + new Vector2(MapSize.X - tileSize.X, i * tileSize.Y), tileSize));
+         for (int i = 6; i < 9; i++)
+            _boundaryObstacles.Add(new Obstacle(MapPosition + new Vector2(MapSize.X, i * tileSize.Y), tileSize));
+         for (int i = 9; i < 15; i++)
+            _boundaryObstacles.Add(new Obstacle(MapPosition + new Vector2(MapSize.X - tileSize.X, i * tileSize.Y), tileSize));
+
 
          Vector2 characterSize = Coordinates.SizeInNDC(new Vector2(62, 62), _winSize);
-         _character = new Character(characterSize, -characterSize / 2);
+         _character = character ?? new Character(characterSize, -characterSize / 2);
          _interface = new Interface(MapSize, MapPosition, _winSize);
 
-         _lastCollectedBonus = null;
+         _activeBonus = null;
       }
 
       public void Update(FrameEventArgs args, Vector2 moveDir, Vector2 projectileDir, ref Stopwatch gameRunTime, ref GameState gameState)
       {
-         _levelTimer.Update((long)(args.Time * 1000));
+         long MillisecLastUpdate = (long)(args.Time * 1000);
 
+         _levelTimer.Update(MillisecLastUpdate);
+         if (_activeBonus?.IsDurationEnded(MillisecLastUpdate) is true)
+         {
+            _activeBonus = null;
+         }
 
          if (_levelTimer.isTimeEnds is true)
          {
@@ -192,7 +214,10 @@ namespace JourneyOfThePrairieKing
             {
                if (Entity.CheckCollision(_character, obstacle) is true)
                {
-                  _character.ChangePosition(_character.Position - 2.0f * _character.Velocity * _winSizeToSquare * moveDir * deltaTime);
+                  var vecToObstacle = obstacle.Position - _character.Position;
+                  vecToObstacle.Normalize();
+
+                  _character.ChangePosition(_character.Position - 1.0f * _character.Velocity * _winSizeToSquare * vecToObstacle * deltaTime);
                   //Console.WriteLine("Collision with obstacle!");
                }
             }
@@ -203,23 +228,32 @@ namespace JourneyOfThePrairieKing
          // character taking bonuses
          foreach (var bonus in _bonuses)
          {
+            if (bonus.IsTTLEnded(MillisecLastUpdate) is true)
+            {
+               bonus.Dispose();
+               _bonuses.Remove(bonus);
+            }
+
             if (Entity.CheckCollision(_character, bonus) is true)
             {
                if (bonus.Duration != 0)
-                  _lastCollectedBonus = bonus;
+                  _activeBonus = bonus;
                
                switch (bonus.Type)
                {
                   case Bonus.BonusType.Wheel:
+                     bonus.Dispose();
                      _bonuses.Remove(bonus);
                      break;
 
                   case Bonus.BonusType.ShotGun:
+                     bonus.Dispose();
                      _bonuses.Remove(bonus);
                      break;
 
                   case Bonus.BonusType.Nuke:
                      _enemies.Clear();
+                     bonus.Dispose();
                      _bonuses.Remove(bonus);
                      break;
 
@@ -227,6 +261,7 @@ namespace JourneyOfThePrairieKing
                      if (_character.HitPoints < 9)
                      {
                         _character.HitPoints++;
+                        //bonus.Dispose();
                         _bonuses.Remove(bonus);
                      }
                      break;
@@ -235,6 +270,7 @@ namespace JourneyOfThePrairieKing
                      if (_character.CoinsCount < 99)
                      {
                         _character.GotCoin(1);
+                        bonus.Dispose();
                         _bonuses.Remove(bonus);
                      }
                      break;
@@ -259,7 +295,7 @@ namespace JourneyOfThePrairieKing
             }
          }
 
-         // enemies makes collisions
+         //enemies makes collisions
          foreach (var enemy1 in _enemies)
          {
             var prevPos = enemy1.Position;
@@ -274,6 +310,21 @@ namespace JourneyOfThePrairieKing
                   var vecToEnemy2 = enemy2.Position - enemy1.Position;
                   vecToEnemy2.Normalize();
                   enemy1.ChangePosition(enemy1.Position - 2.0f * enemy1.Velocity * _winSizeToSquare * vecToEnemy2 * deltaTime);
+               }
+            }
+
+
+            foreach (var obstacle in _boundaryObstacles.Union(_obstacles))
+            {
+               if (Entity.CheckCollision(enemy1, obstacle) is true)
+               {
+                  if (enemy1.Type == Enemy.EnemyType.Ghost)
+                  {
+                     continue;
+                  }
+                  var vecToObstacle = obstacle.Position - enemy1.Position;
+                  vecToObstacle.Normalize();
+                  enemy1.ChangePosition(enemy1.Position - 2.0f * enemy1.Velocity * _winSizeToSquare * vecToObstacle * deltaTime);
                }
             }
          }
@@ -291,7 +342,7 @@ namespace JourneyOfThePrairieKing
             if (projectileDir.X != 0.0f || projectileDir.Y != 0.0f)
             {
                projectileDir.Normalize();
-               SpawnProjectile(_character.Position, projectileDir, (long)(args.Time * 1000));
+               SpawnProjectile(_character.Position + _character.Size / 2, projectileDir);
                _character.LastShotTime = gameRunTime.ElapsedMilliseconds;
             }
          }
@@ -300,7 +351,7 @@ namespace JourneyOfThePrairieKing
          foreach (var projectile in _projectiles)
          {
             bool projectileAlive = true;
-            projectile.ChangePosition(projectile.Position + projectile.Velocity * projectile.Direction);
+            projectile.ChangePosition(projectile.Position + projectile.Velocity * _winSizeToSquare * projectile.Direction * deltaTime);
 
             // remove projectile if it hits obstacle
             foreach (var obstacle in _boundaryObstacles.Union(_obstacles))
@@ -344,31 +395,16 @@ namespace JourneyOfThePrairieKing
          Texture.DrawTexturedRectangle(_textureShader, _textures["level1"], MapPosition, _MapVao);
          _levelTimer.Render(_textureShader, _textures["timebar"]);
 
-         _character.Render(_textureShader, _textures["char1"]);
 
-         foreach (var enemy in _enemies)
+         foreach (var obstacle in _boundaryObstacles)
          {
-            Texture texture;
-            switch (enemy.Type)
-            {
-               case Enemy.EnemyType.Log:
-                  texture = _textures["enemy2"];
-                  break;
-
-               case Enemy.EnemyType.Ghost:
-                  texture = _textures["enemy3"];
-                  break;
-
-               case Enemy.EnemyType.Knight:
-                  texture = _textures["enemy1"];
-                  break;
-
-               default:
-                  texture = _textures["enemy1"];
-                  break;
-            }
-            enemy.Render(_textureShader, texture);
+            obstacle.Render(_textureShader, _textures["invisible_obstacle"]);
          }
+         foreach (var obstacle in _obstacles)
+         {
+            obstacle.Render(_textureShader, _textures["obstacle"]);
+         }
+
 
          foreach (var projectile in _projectiles)
          {
@@ -393,6 +429,32 @@ namespace JourneyOfThePrairieKing
             }
 
             projectile.Render(_textureShader, texture);
+         }
+
+         _character.Render(_textureShader, _textures["char1"]);
+
+         foreach (var enemy in _enemies)
+         {
+            Texture texture;
+            switch (enemy.Type)
+            {
+               case Enemy.EnemyType.Log:
+                  texture = _textures["enemy2"];
+                  break;
+
+               case Enemy.EnemyType.Ghost:
+                  texture = _textures["enemy3"];
+                  break;
+
+               case Enemy.EnemyType.Knight:
+                  texture = _textures["enemy1"];
+                  break;
+
+               default:
+                  texture = _textures["enemy1"];
+                  break;
+            }
+            enemy.Render(_textureShader, texture);
          }
 
 
@@ -443,15 +505,11 @@ namespace JourneyOfThePrairieKing
          _interface.RenderCoinCounter(_textureShader, _textures["digits"], _character.CoinsCount);
 
          {
-            Texture texture;
+            Texture? texture = null;
             switch (gameState)
             {
                case GameState.Start:
                   texture = _textures["start"];
-                  break;
-
-               case GameState.Run:
-                  texture = _textures["invisible_obstacle"];
                   break;
 
                case GameState.Pause:
@@ -465,23 +523,17 @@ namespace JourneyOfThePrairieKing
                case GameState.Win:
                   texture = _textures["win"];
                   break;
-
-               default:
-                  texture = _textures["invisible_obstacle"];
-                  break;
             }
             _interface.RenderScreen(_textureShader, texture);
          }
       }
 
 
-      private void SpawnProjectile(Vector2 position, Vector2 direction, long ellapsedMilliSec)
+      private void SpawnProjectile(Vector2 position, Vector2 direction)
       {
          Vector2 projectileSize = Coordinates.SizeInNDC(new Vector2(16, 16), _winSize);
 
-
-         if (_lastCollectedBonus?.Type == Bonus.BonusType.Wheel 
-            && _lastCollectedBonus?.IsDurationEnded(ellapsedMilliSec) is false) // wheel
+         if (_activeBonus?.Type == Bonus.BonusType.Wheel)
          {
             for (int i = -1; i < 2; i++)
             {
@@ -493,9 +545,7 @@ namespace JourneyOfThePrairieKing
                }
             }
          }
-
-         else if (_lastCollectedBonus?.Type == Bonus.BonusType.ShotGun 
-                  && _lastCollectedBonus?.IsDurationEnded(ellapsedMilliSec) is false) // shotgun
+         else if (_activeBonus?.Type == Bonus.BonusType.ShotGun)
          {
             Vector2 rotatedDirection;
             _projectiles.Add(new Projectile(projectileSize, position, direction, 1));
@@ -504,7 +554,6 @@ namespace JourneyOfThePrairieKing
             rotatedDirection = Matrix2.CreateRotation(-(float)Math.PI / 9) * direction;
             _projectiles.Add(new Projectile(projectileSize, position, rotatedDirection, 1));
          }
-
          else
          {
             _projectiles.Add(new Projectile(projectileSize, position, direction, 1));
@@ -514,6 +563,8 @@ namespace JourneyOfThePrairieKing
       private void SpawnEnemy()
       {
          Vector2 enemySize = Coordinates.SizeInNDC(new Vector2(60, 60), _winSize);
+         Vector2 tileSize = Coordinates.SizeInNDC(new Vector2(1000 / 16.0f, 1000 / 16.0f), _winSize);
+
 
          var prob0 = 0.5f;
          var prob1 = 0.35f;
@@ -522,24 +573,24 @@ namespace JourneyOfThePrairieKing
          var spawnPositions = new List<Vector2>()
          {
             // bottom
-            new (-0.043f, -0.93f),
-            new (0.02f, -0.93f),
-            new (0.084f, -0.93f),
+            MapPosition + new Vector2(7 * tileSize.X, 0),
+            MapPosition + new Vector2(8 * tileSize.X, 0),
+            MapPosition + new Vector2(9 * tileSize.X, 0),
 
             // left
-            new (-0.48f, -0.239f),
-            new (-0.48f, -0.121f),
-            new (-0.48f, -0.009f),
+            MapPosition + new Vector2(0, 6 * tileSize.Y),
+            MapPosition + new Vector2(0, 7 * tileSize.Y),
+            MapPosition + new Vector2(0, 8 * tileSize.Y),
 
             // up
-            new (-0.043f, 0.78f),
-            new (0.02f, 0.78f),
-            new (0.084f, 0.78f),
+            MapPosition + new Vector2(7 * tileSize.X, MapSize.Y - tileSize.Y),
+            MapPosition + new Vector2(8 * tileSize.X, MapSize.Y - tileSize.Y),
+            MapPosition + new Vector2(9 * tileSize.X, MapSize.Y - tileSize.Y),
 
             // right
-            new (0.468f, -0.239f),
-            new (0.468f, -0.121f),
-            new (0.468f, -0.009f),
+            MapPosition + new Vector2(MapSize.X - tileSize.X, 6 * tileSize.Y),
+            MapPosition + new Vector2(MapSize.X - tileSize.X, 7 * tileSize.Y),
+            MapPosition + new Vector2(MapSize.X - tileSize.X, 8 * tileSize.Y),
          };
 
          var rand = new Random();
@@ -564,6 +615,7 @@ namespace JourneyOfThePrairieKing
 
       private void SpawnBonus(Vector2 position)
       {
+         const long bonusTTL = 10_000;
          var rand = new Random();
          var prob = 0.9f;
          if (rand.NextDouble() > prob)
@@ -613,8 +665,23 @@ namespace JourneyOfThePrairieKing
             sizeVec = Coordinates.SizeInNDC(new Vector2(24, 24), _winSize);
          }
 
-         Bonus bonus = new Bonus(position, sizeVec, bonusType, Duration);
+         Bonus bonus = new Bonus(position, sizeVec, bonusType, Duration, bonusTTL);
          _bonuses.Add(bonus);
       }
+
+      public void Restart()
+      {
+         _enemySpawnAllowed = true;
+         _enemyLastSpawnTime = 0;
+         _enemies.Clear();
+         _bonuses.Clear();
+         _projectiles.Clear();
+         _character.Reset();
+         _levelTimer.Reset();
+         _activeBonus = null;
+      }
+
+      public Character ExtractCharacter()
+         => _character; 
    }
 }

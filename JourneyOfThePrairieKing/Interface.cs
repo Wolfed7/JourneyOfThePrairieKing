@@ -181,9 +181,10 @@ namespace JourneyOfThePrairieKing
          Texture.DrawTexturedRectangle(shader, texture, PositionDigit, _vaoNumX[digit]);
       }
 
-      public void RenderScreen(Shader shader, Texture texture)
+      public void RenderScreen(Shader shader, Texture? texture)
       {
-         Texture.DrawTexturedRectangle(shader, texture, PositionScreen, _vaoScreen);
+         if (texture is not null)
+            Texture.DrawTexturedRectangle(shader, texture, PositionScreen, _vaoScreen);
       }
 
       public void RenderCoinIcon(Shader shader, Texture texture)

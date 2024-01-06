@@ -211,27 +211,15 @@ namespace JourneyOfThePrairieKing
                   _gameRunTime.Start();
                   break;
 
-               //case GameState.GameOver:
-               //   _projectiles.Clear();
-               //   _enemies.Clear();
-               //   _mainCharacter.Reset();
-               //   _bonuses.Clear();
-               //   _levelTimer.Reset();
-               //   enemySpawnAllowed = true;
-               //   _enemyLastSpawnTime = 0;
-               //   _gameState = GameState.Run;
-               //   break;
+               case GameState.GameOver:
+                  _levels[_currentLevel].Restart();
+                  _gameState = GameState.Run;
+                  break;
 
-               //case GameState.Win:
-               //   _projectiles.Clear();
-               //   _enemies.Clear();
-               //   _mainCharacter.Reset();
-               //   _bonuses.Clear();
-               //   _levelTimer.Reset();
-               //   enemySpawnAllowed = true;
-               //   _enemyLastSpawnTime = 0;
-               //   _gameState = GameState.Run;
-               //   break;
+               case GameState.Win:
+                  _levels[_currentLevel].Restart();
+                  _gameState = GameState.Run;
+                  break;
                default:
                   break;
             }
