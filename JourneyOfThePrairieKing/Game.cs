@@ -1,4 +1,4 @@
-﻿using CG_PR3;
+﻿using JourneyOfThePrairieKing;
 using OpenTK.Graphics.OpenGL4;
 using OpenTK.Mathematics;
 using OpenTK.Windowing.Common;
@@ -10,8 +10,11 @@ namespace JourneyOfThePrairieKing
 {
    public readonly struct FrameRate
    {
-      public const float MaxDeltaTime = 1.0f / 30.0f;
-      public const float MinDeltaTime = 1.0f / 120.0f;
+      public const int MinFPS = 30;
+      public const int MaxFPS = 120;
+
+      public const float MaxDeltaTime = 1.0f / MinFPS;
+      public const float MinDeltaTime = 1.0f / MaxFPS;
    }
 
    public enum GameState
@@ -55,14 +58,14 @@ namespace JourneyOfThePrairieKing
 
       protected override void OnResize(ResizeEventArgs e)
       {
-         base.OnResize(e);
-
          GL.Viewport(0, 0, Size.X, Size.Y);
+
+         base.OnResize(e);
       }
 
       protected override void OnLoad()
       {
-         WindowState = WindowState.Fullscreen;
+         //WindowState = WindowState.Fullscreen;
          IsVisible = true;
          GL.Enable(EnableCap.Blend);
          GL.BlendFunc((BlendingFactor)BlendingFactorSrc.SrcAlpha, (BlendingFactor)BlendingFactorDest.OneMinusSrcAlpha);
@@ -79,9 +82,16 @@ namespace JourneyOfThePrairieKing
             Console.WriteLine($"{Path.GetFileName(filepath)} loaded successful.");
          }
 
+         var mapPosition = new Vector2(460, 20);
+         var mapSize = new Vector2(1000, 1000);
+         var winSize = new Vector2(ClientSize.X, ClientSize.Y);
          _levels = new List<Level>
          {
-            new Level(_textures, _textureShader, new Vector2(ClientSize.X, ClientSize.Y), new Vector2(460, 20), new Vector2(1000, 1000)),
+            new Level1(_textures, "level1", _textureShader, winSize, mapPosition, mapSize),
+            //new Shop1(_textures, "shop", _textureShader, winSize, mapPosition, mapSize),
+            new Level2(_textures, "level2",_textureShader, winSize, mapPosition, mapSize),
+            //new Shop2(_textures,"shop", _textureShader, winSize, mapPosition, mapSize),
+            new BossLevel(_textures,"level3", _textureShader, winSize, mapPosition, mapSize),
          };
 
          _currentLevel = 0;
@@ -95,12 +105,32 @@ namespace JourneyOfThePrairieKing
 
       protected override void OnUnload()
       {
-
+         foreach (var level in _levels)
+         {
+            //level.Dispose();
+         }
          base.OnUnload();
       }
 
       protected override void OnUpdateFrame(FrameEventArgs args)
       {
+         if(_gameState is GameState.Win)
+         {
+            if (_currentLevel + 1 > _levels.Count)
+            {
+               if (IsKeyDown(Keys.Enter))
+               {
+                  _currentLevel = 0;
+                  _levels[_currentLevel].Restart();
+                  _gameState = GameState.Start;
+               }
+               return;
+            }
+            _currentLevel++;
+            _levels[_currentLevel].SetCharacter(_levels[_currentLevel - 1].ExtractCharacter());
+            _gameState = GameState.Run;
+         }
+
          if (_gameState is not GameState.Run)
          {
             return;
@@ -167,20 +197,18 @@ namespace JourneyOfThePrairieKing
 
       protected override void OnMouseDown(MouseButtonEventArgs e)
       {
-
          base.OnMouseDown(e);
       }
 
       protected override void OnKeyDown(KeyboardKeyEventArgs e)
       {
-
          #region Window management
+
          switch (e.Key)
          {
             case Keys.F:
             {
-               WindowState = WindowState == WindowState.Fullscreen ? WindowState.Maximized : WindowState.Fullscreen;
-               Console.WriteLine(WindowState);
+               WindowState = IsFullscreen ? WindowState.Maximized : WindowState.Fullscreen;
                break;
             }
 
@@ -190,6 +218,7 @@ namespace JourneyOfThePrairieKing
                break;
             }
          }
+
          #endregion
 
          if (e.Key is Keys.Enter)
@@ -216,10 +245,17 @@ namespace JourneyOfThePrairieKing
                   _gameState = GameState.Run;
                   break;
 
-               case GameState.Win:
-                  _levels[_currentLevel].Restart();
-                  _gameState = GameState.Run;
-                  break;
+               //case GameState.Win:
+               //   if (_currentLevel + 1 > _levels.Count)
+               //   {
+               //      Close(); // temp
+               //      return;
+               //   }
+               //   _currentLevel++;
+               //   _levels[_currentLevel].SetCharacter(_levels[_currentLevel - 1].ExtractCharacter());
+               //   _gameState = GameState.Run;
+               //   break;
+
                default:
                   break;
             }
@@ -227,9 +263,5 @@ namespace JourneyOfThePrairieKing
 
          base.OnKeyDown(e);
       }
-
-
-
-
    }
 }

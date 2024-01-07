@@ -1,4 +1,4 @@
-﻿using CG_PR3;
+﻿using JourneyOfThePrairieKing;
 using OpenTK.Graphics.OpenGL4;
 using OpenTK.Mathematics;
 using System;

@@ -1,11 +1,6 @@
-﻿using CG_PR3;
+﻿using JourneyOfThePrairieKing;
 using OpenTK.Graphics.OpenGL4;
 using OpenTK.Mathematics;
-using OpenTK.Windowing.Desktop;
-using System.Drawing;
-using System.Security.Cryptography.X509Certificates;
-using static JourneyOfThePrairieKing.Projectile;
-using static System.Reflection.Metadata.BlobBuilder;
 
 namespace JourneyOfThePrairieKing
 {
@@ -16,10 +11,50 @@ namespace JourneyOfThePrairieKing
       public void ChangePosition(Vector2 position);
    }
 
-   public abstract class Entity
+   public class Entity : IDisposable
    {
-      public abstract Vector2 Position { get; protected set; } // Left bottom corner (in NDC).
-      public abstract Vector2 Size { get; protected set; } 
+
+      #region buffers
+
+      protected VertexPositionTexture[] _vertices;
+      protected VertexBufferObject _vbo;
+      protected VertexArrayObject _vao;
+
+      public Vector2 Size { get; protected set; } // Left bottom corner (in NDC).
+      public Vector2 Position { get; protected set; }
+
+      #endregion
+
+      protected Entity(Vector2 size, Vector2 position)
+      {
+         Size = size;
+         Position = position;
+
+         _vertices = new VertexPositionTexture[]
+         {
+            new (new Vector2(0, 0), new Vector2(0.0f, 0.0f)),
+            new (new Vector2(Size.X, 0), new Vector2(1.0f, 0.0f)),
+            new (new Vector2(0, Size.Y), new Vector2(0.0f, 1.0f)),
+            new (new Vector2(Size.X, Size.Y), new Vector2(1.0f, 1.0f))
+         };
+
+         _vbo = new VertexBufferObject(_vertices, BufferUsageHint.StreamDraw);
+         _vbo.Bind();
+
+         _vao = new VertexArrayObject();
+         _vao.Bind();
+      }
+
+      public void Render(Shader shader, Texture texture)
+      {
+         Texture.DrawTexturedRectangle(shader, texture, Position, _vao);
+      }
+
+      public void Dispose()
+      {
+         _vbo.Dispose();
+         _vao.Dispose();
+      }
 
       public static bool CheckCollision(Entity one, Entity two)
       {
@@ -54,17 +89,6 @@ namespace JourneyOfThePrairieKing
          Medium = 80,
       }
 
-      #region buffers
-
-      private VertexPositionTexture[] _vertices;
-      private VertexBufferObject _vbo;
-      private VertexArrayObject _vao;
-
-      public override Vector2 Size { get; protected set; }
-      public override Vector2 Position { get; protected set; }
-
-      #endregion
-
       private float _defaultVelocity = 0.12f;
       private long _defaultReloadTime = 350;
       private int _defaultHitPoints = 0;
@@ -72,9 +96,9 @@ namespace JourneyOfThePrairieKing
       public static readonly long HitCooldown = 2000; // Milliseconds
 
       public int CoinsCount { get; private set; }
-      public ProjectileLevel Ammo { get; set; }
-      public BootsLevel Boots { get; set; }
-      public GunLevel Gun { get; set; }
+      public ProjectileLevel Ammo { get; private set; }
+      public BootsLevel Boots { get; private set; }
+      public GunLevel Gun { get; private set; }
 
       public long ReloadTime { get; set; } // Milliseconds
       public int HitPoints { get; set; }
@@ -82,40 +106,18 @@ namespace JourneyOfThePrairieKing
       public long LastShotTime { get; set; } // Milliseconds
       public float Velocity { get; set; }
 
-      public Character(Vector2 size, Vector2 position)
+      public Character(Vector2 size, Vector2 position) : base(size, position)
       {
          Ammo = ProjectileLevel.Stone;
          Boots = BootsLevel.Default;
          Gun = GunLevel.Default;
 
-         Size = size;
-         Position = position;
          Velocity = _defaultVelocity * (float)((int)Boots / 100.0f);
-         ReloadTime = _defaultReloadTime * (long)((int)Gun / 100.0f);
+         ReloadTime = (long)(_defaultReloadTime * ((int)Gun / 100.0f));
          LastHitTime = 0;
          LastShotTime = 0;
          CoinsCount = 0;
          HitPoints = _defaultHitPoints;
-
-
-         _vertices = new VertexPositionTexture[]
-         {
-            new (new Vector2(0, 0), new Vector2(0.0f, 0.0f)),
-            new (new Vector2(Size.X, 0), new Vector2(1.0f, 0.0f)),
-            new (new Vector2(0, Size.Y), new Vector2(0.0f, 1.0f)),
-            new (new Vector2(Size.X, Size.Y), new Vector2(1.0f, 1.0f))
-         };
-
-         _vbo = new VertexBufferObject(_vertices, BufferUsageHint.StreamDraw);
-         _vbo.Bind();
-
-         _vao = new VertexArrayObject();
-         _vao.Bind();
-      }
-
-      public void Render(Shader shader, Texture texture)
-      {
-         Texture.DrawTexturedRectangle(shader, texture, Position, _vao);
       }
 
       public void GotDamage(int damage, long time)
@@ -156,6 +158,22 @@ namespace JourneyOfThePrairieKing
          }
       }
 
+      public void SetGun(GunLevel level)
+      {
+         Gun = level;
+         ReloadTime = (long)(_defaultReloadTime * ((int)level / 100.0f));
+         //Console.WriteLine(ReloadTime);
+      }
+
+      public void SetBoots(BootsLevel level)
+      {
+         Boots = level;
+         Velocity = _defaultVelocity * (float)((int)level / 100.0f);
+      }
+
+      public void SetAmmo(ProjectileLevel level)
+         => Ammo = level;
+
       public void ChangePosition(Vector2 position)
       {
          Position = position;
@@ -171,23 +189,13 @@ namespace JourneyOfThePrairieKing
          Knight,
       }
 
-      private VertexPositionTexture[] _vertices;
-      private VertexBufferObject _vbo;
-      private VertexArrayObject _vao;
-
-      public override Vector2 Size { get; protected set; }
-      public override Vector2 Position { get; protected set; }
-
       public EnemyType Type { get; init; }
       public int HitPoints { get; private set; }
       public float Velocity { get; set; }
 
-      public Enemy(Vector2 size, Vector2 position, EnemyType type)
+      public Enemy(Vector2 size, Vector2 position, EnemyType type) : base(size, position)
       {
          Type = type;
-         Size = size;
-         Position = position;
-
          switch (type)
          {
             case EnemyType.Log:
@@ -205,37 +213,45 @@ namespace JourneyOfThePrairieKing
                HitPoints = 1;
                break;
          }
-
-         _vertices = new VertexPositionTexture[]
-         {
-            new (new Vector2(0, 0), new Vector2(0.0f, 0.0f)),
-            new (new Vector2(Size.X, 0), new Vector2(1.0f, 0.0f)),
-            new (new Vector2(0, Size.Y), new Vector2(0.0f, 1.0f)),
-            new (new Vector2(Size.X, Size.Y), new Vector2(1.0f, 1.0f))
-         };
-
-         _vbo = new VertexBufferObject(_vertices, BufferUsageHint.StreamDraw);
-         _vbo.Bind();
-
-         _vao = new VertexArrayObject();
-         _vao.Bind();
       }
-
-      public void Render(Shader shader, Texture texture)
-      {
-         Texture.DrawTexturedRectangle(shader, texture, Position, _vao);
-      }
-
       public void GotDamage(int damage)
       {
          HitPoints -= damage;
       }
 
-
-      public void Dispose()
+      public void ChangePosition(Vector2 position)
       {
-         _vao.Dispose();
-         _vbo.Dispose();
+         Position = position;
+      }
+   }
+
+   public sealed class Boss : Entity, IMovable
+   {
+      public enum BossPhase
+      {
+         First,
+         Second,
+         Third,
+      }
+
+      public static readonly int DefaultHP = 80;
+
+      public bool IsDead { get; set; }
+      public int HitPoints { get; private set; }
+      public float Velocity { get; set; }
+      public BossPhase Phase { get; set; }
+
+
+      public Boss(Vector2 size, Vector2 position) : base(size, position)
+      {
+         HitPoints = DefaultHP;
+         Phase = BossPhase.First;
+         IsDead = false;
+      }
+
+      public void GotDamage(int damage)
+      {
+         HitPoints -= damage;
       }
 
       public void ChangePosition(Vector2 position)
@@ -246,52 +262,18 @@ namespace JourneyOfThePrairieKing
 
    public sealed class Projectile : Entity, IMovable
    {
-      private VertexPositionTexture[] _vertices;
-      private VertexBufferObject _vbo;
-      private VertexArrayObject _vao;
-
-      public override Vector2 Size { get; protected set; }
-      public override Vector2 Position { get; protected set; }
-
       private float _defaultVelocity = 0.2f;
 
       public int Damage { get; }
       public Vector2 Direction { get; }
       public  float Velocity { get; set; }
 
-      public Projectile(Vector2 size, Vector2 position, Vector2 direction, int damage)
+      public Projectile(Vector2 size, Vector2 position, Vector2 direction, int damage) : base(size, position)
       {
-         Size = size;
-         Position = position;
          Direction = direction;
          Velocity = _defaultVelocity;
 
          Damage = damage;
-
-         _vertices = new VertexPositionTexture[]
-         {
-            new (new Vector2(0, 0), new Vector2(0.0f, 0.0f)),
-            new (new Vector2(Size.X, 0), new Vector2(1.0f, 0.0f)),
-            new (new Vector2(0, Size.Y), new Vector2(0.0f, 1.0f)),
-            new (new Vector2(Size.X, Size.Y), new Vector2(1.0f, 1.0f))
-         };
-
-         _vbo = new VertexBufferObject(_vertices, BufferUsageHint.StreamDraw);
-         _vbo.Bind();
-
-         _vao = new VertexArrayObject();
-         _vao.Bind();
-      }
-
-      public void Render(Shader shader, Texture texture)
-      {
-         Texture.DrawTexturedRectangle(shader, texture, Position, _vao);
-      }
-
-      public void Dispose()
-      {
-         _vao.Dispose();
-         _vbo.Dispose();
       }
 
       public void ChangePosition(Vector2 position)
@@ -302,37 +284,7 @@ namespace JourneyOfThePrairieKing
 
    public sealed class Obstacle : Entity
    {
-      private VertexPositionTexture[] _vertices;
-      private VertexBufferObject _vbo;
-      private VertexArrayObject _vao;
-
-      public override Vector2 Size { get; protected set; }
-      public override Vector2 Position { get; protected set; }
-
-      public Obstacle(Vector2 position, Vector2 size)
-      {
-         Position = position;
-         Size = size;
-
-         _vertices = new VertexPositionTexture[]
-         {
-            new (new Vector2(0, 0), new Vector2(0.0f, 0.0f)),
-            new (new Vector2(Size.X, 0), new Vector2(1.0f, 0.0f)),
-            new (new Vector2(0, Size.Y), new Vector2(0.0f, 1.0f)),
-            new (new Vector2(Size.X, Size.Y), new Vector2(1.0f, 1.0f))
-         };
-
-         _vbo = new VertexBufferObject(_vertices, BufferUsageHint.StreamDraw);
-         _vbo.Bind();
-
-         _vao = new VertexArrayObject();
-         _vao.Bind();
-      }
-
-      public void Render(Shader shader, Texture texture)
-      {
-         Texture.DrawTexturedRectangle(shader, texture, Position, _vao);
-      }
+      public Obstacle(Vector2 position, Vector2 size) : base(size, position) { }
    }
 
    public sealed class Bonus : Entity
@@ -348,39 +300,16 @@ namespace JourneyOfThePrairieKing
       private long _remainDuration;
       private long _remainTTL;
 
-
-      private VertexPositionTexture[] _vertices;
-      private VertexBufferObject _vbo;
-      private VertexArrayObject _vao;
-
-      public override Vector2 Size { get; protected set; }
-      public override Vector2 Position { get; protected set; }
       public long Duration { get; init; }
       public long TTL { get; init; }
       public BonusType Type { get; init; }
 
-      public Bonus(Vector2 position, Vector2 size, BonusType bonusType, long bonusDuration, long TTL)
+      public Bonus(Vector2 position, Vector2 size, BonusType bonusType, long bonusDuration, long TTL) : base(size, position)
       {
-         Position = position;
-         Size = size;
          Type = bonusType;
          Duration = bonusDuration;
          _remainDuration = bonusDuration;
          _remainTTL = TTL;
-
-         _vertices = new VertexPositionTexture[]
-         {
-            new (new Vector2(0, 0), new Vector2(0.0f, 0.0f)),
-            new (new Vector2(Size.X, 0), new Vector2(1.0f, 0.0f)),
-            new (new Vector2(0, Size.Y), new Vector2(0.0f, 1.0f)),
-            new (new Vector2(Size.X, Size.Y), new Vector2(1.0f, 1.0f))
-         };
-
-         _vbo = new VertexBufferObject(_vertices, BufferUsageHint.StreamDraw);
-         _vbo.Bind();
-
-         _vao = new VertexArrayObject();
-         _vao.Bind();
       }
 
       public bool IsDurationEnded (long EllapsedMilliSec)
@@ -399,17 +328,6 @@ namespace JourneyOfThePrairieKing
          if (_remainTTL <= 0)
             isEnded = true;
          return isEnded;
-      }
-
-      public void Dispose()
-      {
-         _vbo.Dispose();
-         _vao.Dispose();
-      }
-
-      public void Render(Shader shader, Texture texture)
-      {
-         Texture.DrawTexturedRectangle(shader, texture, Position, _vao);
       }
    }
 }
