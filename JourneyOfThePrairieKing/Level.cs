@@ -59,7 +59,7 @@ namespace JourneyOfThePrairieKing
       protected string _mapTextureName;
       protected VertexPositionTexture[] _MapVertices;
       protected VertexBufferObject _MapVbo;
-      protected VertexArrayObject _MapVao;
+      protected VertexArrayObject _mapVao;
 
       protected Vector2 MapSize { get; init; }
       protected Vector2 MapPosition { get; init; }
@@ -97,8 +97,8 @@ namespace JourneyOfThePrairieKing
          };
          _MapVbo = new VertexBufferObject(_MapVertices, BufferUsageHint.StaticDraw);
          _MapVbo.Bind();
-         _MapVao = new VertexArrayObject();
-         _MapVao.Bind();
+         _mapVao = new VertexArrayObject();
+         _mapVao.Bind();
 
 
          _enemySpawnAllowed = true;
@@ -110,6 +110,8 @@ namespace JourneyOfThePrairieKing
          _enemies = new HashSet<Enemy>();
          _projectiles = new HashSet<Projectile>();
          _bonuses = new HashSet<Bonus>();
+
+         #region Obstacles declaration
 
          _tileSize = MapSize / 16.0f;
          _obstacles = new HashSet<Obstacle>();
@@ -151,9 +153,12 @@ namespace JourneyOfThePrairieKing
          for (int i = 9; i < 15; i++)
             _boundaryObstacles.Add(new Obstacle(MapPosition + new Vector2(MapSize.X - _tileSize.X, i * _tileSize.Y), _tileSize));
 
+         #endregion
 
          Vector2 characterSize = Coordinates.SizeInNDC(new Vector2(62, 62), _winSize);
          _character = character ?? new Character(characterSize, -characterSize / 2);
+
+         #region Interface declaration
 
          _Interfaces = new Dictionary<string, LevelInterface>();
          var digitSize = Coordinates.SizeInNDC(new Vector2(12, 24), _winSize);
@@ -175,6 +180,15 @@ namespace JourneyOfThePrairieKing
          var wheel = new LevelInterface(Coordinates.SizeInNDC(new Vector2(64, 64), _winSize), new Vector2(MapPosition.X - MapSize.X / 10 + 0.009f, MapPosition.Y + MapSize.Y * 0.887f), _textures["wheel"]);
          var shotgun = new LevelInterface(Coordinates.SizeInNDC(new Vector2(90, 30), _winSize), new Vector2(MapPosition.X - MapSize.X / 10 - 0.01f, MapPosition.Y + MapSize.Y * 0.90f), _textures["shotgun"]);
 
+         var w = _tileSize * 0.6f;
+         var ammo2 = new LevelInterface(w, new Vector2(MapPosition.X - MapSize.X / 10, MapPosition.Y + MapSize.Y * 0.65f), _textures["ammo2"]);
+         var ammo3 = new LevelInterface(w, new Vector2(MapPosition.X - MapSize.X / 10, MapPosition.Y + MapSize.Y * 0.65f), _textures["ammo3"]);
+
+         var gun2 = new LevelInterface(w, new Vector2(MapPosition.X - MapSize.X / 10, MapPosition.Y + MapSize.Y * 0.6f), _textures["gun2"]);
+         var gun3 = new LevelInterface(w, new Vector2(MapPosition.X - MapSize.X / 10, MapPosition.Y + MapSize.Y * 0.6f), _textures["gun3"]);
+
+         var boots2 = new LevelInterface(w, new Vector2(MapPosition.X - MapSize.X / 10, MapPosition.Y + MapSize.Y * 0.55f), _textures["shoes"]);
+
          _Interfaces.Add("HitPointsIcon", HitPointsIcon);
          _Interfaces.Add("HitPointsCounter", HitPointsCounter);
          _Interfaces.Add("CoinIcon", CoinIcon);
@@ -185,11 +199,22 @@ namespace JourneyOfThePrairieKing
          _Interfaces.Add("gameOver", gameOver);
          _Interfaces.Add("gamePause", gamePause);
 
-         _Interfaces.Add("arrow", arrow);
+         _Interfaces.Add("arrow", arrow);    
 
          _Interfaces.Add("bonusholder", bonusholder);
          _Interfaces.Add("wheel", wheel);
          _Interfaces.Add("shotgun", shotgun);
+
+         _Interfaces.Add("ammo2", ammo2);
+         _Interfaces.Add("ammo3", ammo3);
+
+         _Interfaces.Add("gun2", gun2);
+         _Interfaces.Add("gun3", gun3);
+
+         _Interfaces.Add("boots2", boots2);
+
+         #endregion 
+
 
          _activeBonus = null;
       }
@@ -406,7 +431,7 @@ namespace JourneyOfThePrairieKing
 
       public virtual void Render(FrameEventArgs args, GameState gameState)
       {
-         Texture.DrawTexturedRectangle(_textureShader, _textures[_mapTextureName], MapPosition, _MapVao);
+         Texture.DrawTexturedRectangle(_textureShader, _textures[_mapTextureName], MapPosition, _mapVao);
          _levelTimer.Render(_textureShader, _textures["timebar"]);
 
          if (_enemies.Count == 0 && _enemySpawnAllowed is false)
@@ -418,30 +443,7 @@ namespace JourneyOfThePrairieKing
             obstacle.Render(_textureShader, _textures["obstacle"]);
          }
 
-         foreach (var projectile in _projectiles)
-         {
-            Texture texture;
-            switch (_character.Ammo)
-            {
-               case Character.ProjectileLevel.Stone:
-                  texture = _textures["projectile1"];
-                  break;
-
-               case Character.ProjectileLevel.Metal:
-                  texture = _textures["projectile2"];
-                  break;
-
-               case Character.ProjectileLevel.Burning:
-                  texture = _textures["projectile3"];
-                  break;
-
-               default:
-                  texture = _textures["projectile1"];
-                  break;
-            }
-
-            projectile.Render(_textureShader, texture);
-         }
+         DrawProjectiles();
 
          _character.Render(_textureShader, _textures["char1"]);
 
@@ -509,7 +511,39 @@ namespace JourneyOfThePrairieKing
          }
 
 
+         DrawInterface(gameState);
+      }
 
+      protected virtual void DrawProjectiles()
+      {
+         foreach (var projectile in _projectiles)
+         {
+            Texture texture;
+            switch (_character.Ammo)
+            {
+               case Character.ProjectileLevel.Stone:
+                  texture = _textures["projectile1"];
+                  break;
+
+               case Character.ProjectileLevel.Metal:
+                  texture = _textures["projectile2"];
+                  break;
+
+               case Character.ProjectileLevel.Burning:
+                  texture = _textures["projectile3"];
+                  break;
+
+               default:
+                  texture = _textures["projectile1"];
+                  break;
+            }
+
+            projectile.Render(_textureShader, texture);
+         }
+      }
+
+      protected virtual void DrawInterface(GameState gameState)
+      {
          // Interface objects
          _Interfaces["HitPointsIcon"].Render(_textureShader);
          _Interfaces["HitPointsCounter"].Render(_textureShader, _character.HitPoints);
@@ -546,12 +580,42 @@ namespace JourneyOfThePrairieKing
                //_Interfaces["gameWin"].Render(_textureShader);
                break;
          }
-      }
 
+         switch (_character.Gun)
+         {
+            case Character.GunLevel.Medium:
+               _Interfaces["gun2"].Render(_textureShader);
+               break;
+
+            case Character.GunLevel.High:
+               _Interfaces["gun3"].Render(_textureShader);
+               break;
+         }
+
+         switch (_character.Ammo)
+         {
+            case Character.ProjectileLevel.Metal:
+               _Interfaces["ammo2"].Render(_textureShader);
+               break;
+
+            case Character.ProjectileLevel.Burning:
+               _Interfaces["ammo3"].Render(_textureShader);
+               break;
+         }
+
+         switch (_character.Boots)
+         {
+            case Character.BootsLevel.Medium:
+               _Interfaces["boots2"].Render(_textureShader);
+               break;
+         }
+      }
 
       protected virtual void SpawnProjectile(Vector2 position, Vector2 direction)
       {
          Vector2 projectileSize = Coordinates.SizeInNDC(new Vector2(16, 16), _winSize);
+         int projDamage = (int)_character.Ammo;
+
 
          if (_activeBonus?.Type == Bonus.BonusType.Wheel)
          {
@@ -561,22 +625,22 @@ namespace JourneyOfThePrairieKing
                {
                   direction = new Vector2(i, j);
                   direction.Normalize();
-                  _projectiles.Add(new Projectile(projectileSize, position, direction, 1));
+                  _projectiles.Add(new Projectile(projectileSize, position, direction, projDamage));
                }
             }
          }
          else if (_activeBonus?.Type == Bonus.BonusType.ShotGun)
          {
             Vector2 rotatedDirection;
-            _projectiles.Add(new Projectile(projectileSize, position, direction, 1));
+            _projectiles.Add(new Projectile(projectileSize, position, direction, projDamage));
             rotatedDirection = Matrix2.CreateRotation((float)Math.PI / 9) * direction;
-            _projectiles.Add(new Projectile(projectileSize, position, rotatedDirection, 1));
+            _projectiles.Add(new Projectile(projectileSize, position, rotatedDirection, projDamage));
             rotatedDirection = Matrix2.CreateRotation(-(float)Math.PI / 9) * direction;
-            _projectiles.Add(new Projectile(projectileSize, position, rotatedDirection, 1));
+            _projectiles.Add(new Projectile(projectileSize, position, rotatedDirection, projDamage));
          }
          else
          {
-            _projectiles.Add(new Projectile(projectileSize, position, direction, 1));
+            _projectiles.Add(new Projectile(projectileSize, position, direction, projDamage));
          }
       }
 
@@ -794,9 +858,15 @@ namespace JourneyOfThePrairieKing
       }
    }
 
-   public sealed class Shop1 : Level
+   public sealed class Shop : Level
    {
-      public Shop1
+      private List<Obstacle> _shopList; 
+      private Dictionary<string, LevelInterface> _pricesInterface;
+      private List<int> _prices;
+      private List<Obstacle> _itemHolders;
+      private List<bool> _available;
+
+      public Shop
          (
          Dictionary<string, Texture> textures,
          string mapTextureName,
@@ -807,140 +877,248 @@ namespace JourneyOfThePrairieKing
          Character? character = null
          ) : base(textures, mapTextureName, textureShader, winSize, mapPosition, mapSize, character)
       {
+         _enemySpawnAllowed = false;
          _levelTimer = new Timer(1, Coordinates.PosInNDC(new Vector2(460, 1040), _winSize), new Vector2(MapSize.X, MapSize.Y / 100));
+         _shopList = new List<Obstacle>();
+         _itemHolders = new List<Obstacle>();
+
+         _pricesInterface = new Dictionary<string, LevelInterface>();
+         _available = new List<bool> { false, false, false };
+
+         _prices = new List<int> { 0, 0, 0 };
+      }
+
+      public override void OnCharacterSet(Character character)
+      {
+         base.OnCharacterSet(character);
+
+         var shopStartPosition = new Vector2(MapPosition.X + MapSize.X * 0.2f, MapPosition.Y + MapSize.Y * 0.3f);
+         var itemSize = Coordinates.SizeInNDC(new Vector2(48, 48), _winSize);
+         var itemHolderSize = Coordinates.SizeInNDC(new Vector2(64, 64), _winSize);
+         var coinSize = Coordinates.SizeInNDC(new Vector2(16, 16), _winSize);
+         var digitSize = Coordinates.SizeInNDC(new Vector2(12, 24), _winSize);
+
+         for (int i = 0; i < 3; i++)
+         {
+            var itemPosition = shopStartPosition + new Vector2(itemSize.X * i + itemSize.X / 2 * i, 0);
+            _shopList.Add(new Obstacle(itemPosition, itemSize));
+
+            _itemHolders.Add(new Obstacle(itemPosition - new Vector2(itemSize.X / 5, itemSize.Y / 4), itemHolderSize));
+         }
+
+
+         string interfaceName = "";
+         for (int k = 0; k < 3; k++)
+         {
+            switch (k)
+            {
+               case 0:
+                  switch (_character.Ammo)
+                  {
+                     case Character.ProjectileLevel.Stone:
+                        _prices[k] = 15;
+                        _available[k] = true;
+                        break;
+                     case Character.ProjectileLevel.Metal:
+                        _prices[k] = 25;
+                        _available[k] = true;
+                        break;
+                     case Character.ProjectileLevel.Burning:
+                        continue;
+                  }
+                  break;
+               case 1:
+                  switch (_character.Gun)
+                  {
+                     case Character.GunLevel.Default:
+                        _prices[k] = 10;
+                        _available[k] = true;
+                        break;
+                     case Character.GunLevel.Medium:
+                        _prices[k] = 20;
+                        _available[k] = true;
+                        break;
+                     case Character.GunLevel.High:
+                        continue;
+                  }
+                  break;
+               case 2:
+                  switch (_character.Boots)
+                  {
+                     case Character.BootsLevel.Default:
+                        _prices[k] = 25;
+                        _available[k] = true;
+                        break;
+                     case Character.BootsLevel.Medium:
+                        continue;
+                  }
+
+                  break;
+
+            }
+
+
+            interfaceName = "item" + $"{k}" + "_coin";
+            var CoinIcon = new LevelInterface(coinSize, new Vector2(shopStartPosition.X + itemSize.X * k + itemSize.X / 2 * k + 2.3f * digitSize.X, shopStartPosition.Y - 1.0f * itemSize.Y + coinSize.Y / 4), _textures["coin"]);
+            _pricesInterface.Add(interfaceName, CoinIcon);
+
+            interfaceName = "item" + $"{k}" + "_counter";
+            var CostCounter = new Counter(digitSize, new Vector2(shopStartPosition.X + itemSize.X * k + itemSize.X / 2 * k, shopStartPosition.Y - 1.0f * itemSize.Y), _textures["digits"], 10);
+            _pricesInterface.Add(interfaceName, CostCounter);
+         }
       }
 
       public override void Update(FrameEventArgs args, Vector2 moveDir, Vector2 projectileDir, ref Stopwatch gameRunTime, ref GameState gameState)
       {
-         _character.SetAmmo(Character.ProjectileLevel.Metal);
-         _character.SetBoots(Character.BootsLevel.Medium);
-         _character.SetGun(Character.GunLevel.Medium);
+         base.Update(args, moveDir, projectileDir, ref gameRunTime, ref gameState);
 
-         long MillisecLastUpdate = (long)(args.Time * 1000);
-
-         float deltaTime = (float)args.Time;
-
-         //Console.WriteLine(deltaTime);
-         deltaTime = (float)Math.Min(deltaTime, FrameRate.MaxDeltaTime);
-         deltaTime = (float)Math.Max(deltaTime, FrameRate.MinDeltaTime);
-
-         #region Movement
-
-         if (moveDir.X != 0.0f || moveDir.Y != 0.0f)
+         for (int i = 0; i < 3; i++)
          {
-            moveDir.Normalize();
-            _character.ChangePosition(_character.Position + _character.Velocity * _winSizeToSquare * moveDir * deltaTime);
-
-            foreach (var obstacle in _boundaryObstacles.Union(_obstacles))
+            if (_available[i] is true)
             {
-               if (Entity.CheckCollision(_character, obstacle) is true)
+               if (Entity.CheckCollision(_shopList[i], _character) is true)
                {
-                  var vecToObstacle = obstacle.Position - _character.Position;
-                  vecToObstacle.Normalize();
+                  if (_prices[i] > _character.CoinsCount)
+                  {
+                     continue;
+                  }
 
-                  _character.ChangePosition(_character.Position - 1.0f * _character.Velocity * _winSizeToSquare * vecToObstacle * deltaTime);
-                  //Console.WriteLine("Collision with obstacle!");
-               }
-            }
-         }
+                  switch (i)
+                  {
+                     case 0:
+                        switch (_character.Ammo)
+                        {
+                           case Character.ProjectileLevel.Stone:
+                              _character.SetAmmo(Character.ProjectileLevel.Metal);
+                              break;
+                           case Character.ProjectileLevel.Metal:
+                              _character.SetAmmo(Character.ProjectileLevel.Burning);
+                              break;
+                           case Character.ProjectileLevel.Burning:
+                              continue;
+                        }
+                        break;
+                     case 1:
+                        switch (_character.Gun)
+                        {
+                           case Character.GunLevel.Default:
+                              _character.SetGun(Character.GunLevel.Medium);
+                              break;
+                           case Character.GunLevel.Medium:
+                              _character.SetGun(Character.GunLevel.High);
+                              break;
+                           case Character.GunLevel.High:
+                              continue;
+                        }
+                        break;
+                     case 2:
+                        switch (_character.Boots)
+                        {
+                           case Character.BootsLevel.Default:
+                              _character.SetBoots(Character.BootsLevel.Medium);
+                              break;
+                           case Character.BootsLevel.Medium:
+                              continue;
+                        }
 
-         // character taking bonuses
-         foreach (var bonus in _bonuses)
-         {
-            if (bonus.IsTTLEnded(MillisecLastUpdate) is true)
-            {
-               bonus.Dispose();
-               _bonuses.Remove(bonus);
-            }
+                        break;
+                  }
 
-            if (Entity.CheckCollision(_character, bonus) is true)
-            {
-               if (bonus.Duration != 0)
-                  _activeBonus = bonus;
+                  _character.SpendCoins(_prices[i]);
+                  _shopList[i].Dispose();
+                  _available[i] = false;
 
-               switch (bonus.Type)
-               {
-                  case Bonus.BonusType.Wheel:
-                     bonus.Dispose();
-                     _bonuses.Remove(bonus);
-                     break;
-
-                  case Bonus.BonusType.ShotGun:
-                     bonus.Dispose();
-                     _bonuses.Remove(bonus);
-                     break;
-
-                  case Bonus.BonusType.Nuke:
-                     _enemies.Clear();
-                     bonus.Dispose();
-                     _bonuses.Remove(bonus);
-                     break;
-
-                  case Bonus.BonusType.HitPoint:
-                     if (_character.HitPoints < 9)
-                     {
-                        _character.HitPoints++;
-                        //bonus.Dispose();
-                        _bonuses.Remove(bonus);
-                     }
-                     break;
-
-                  case Bonus.BonusType.Coin:
-                     if (_character.CoinsCount < 99)
-                     {
-                        _character.GotCoin(1);
-                        bonus.Dispose();
-                        _bonuses.Remove(bonus);
-                     }
-                     break;
-               }
-
-
-               //Console.WriteLine("Collision with bonus!");
-            }
-         }
-
-         #endregion
-
-         #region Shoot
-
-         //Console.WriteLine(_timer.ElapsedMilliseconds + " " + _lastShotTime);
-
-         // character shooting
-         if (gameRunTime.ElapsedMilliseconds - _character.LastShotTime > _character.ReloadTime)
-         {
-            if (projectileDir.X != 0.0f || projectileDir.Y != 0.0f)
-            {
-               projectileDir.Normalize();
-               SpawnProjectile(_character.Position + _character.Size / 2, projectileDir);
-               _character.LastShotTime = gameRunTime.ElapsedMilliseconds;
-            }
-         }
-
-         // process projectiles 
-         foreach (var projectile in _projectiles)
-         {
-            projectile.ChangePosition(projectile.Position + projectile.Velocity * _winSizeToSquare * projectile.Direction * deltaTime);
-
-            // remove projectile if it hits obstacle
-            foreach (var obstacle in _boundaryObstacles.Union(_obstacles))
-            {
-               if (Entity.CheckCollision(projectile, obstacle) is true)
-               {
-                  _projectiles.Remove(projectile);
                   break;
+
                }
             }
          }
-
-         #endregion
       }
 
       public override void Render(FrameEventArgs args, GameState gameState)
       {
-         base.Render(args, gameState);
+         Texture.DrawTexturedRectangle(_textureShader, _textures[_mapTextureName], MapPosition, _mapVao);
 
+         if (_enemies.Count == 0 && _enemySpawnAllowed is false)
+         {
+            _Interfaces["arrow"].Render(_textureShader);
+         }
 
+         foreach (var itemHolder in _itemHolders)
+         {
+            itemHolder.Render(_textureShader, _textures["bonusholder"]);
+         }
+
+         for (int i = 0; i < 3; i++)
+         {
+            if (_available[i] is true)
+            {
+               switch (i)
+               {
+                  case 0:
+                     switch (_character.Ammo)
+                     {
+                        case Character.ProjectileLevel.Stone:
+                           _shopList[i].Render(_textureShader, _textures["ammo2"]);
+                           break;
+                        case Character.ProjectileLevel.Metal:
+                           _shopList[i].Render(_textureShader, _textures["ammo3"]);
+                           break;
+                        case Character.ProjectileLevel.Burning:
+                           continue;
+                     }
+                     break;
+                  case 1:
+                     switch (_character.Gun)
+                     {
+                        case Character.GunLevel.Default:
+                           _shopList[i].Render(_textureShader, _textures["gun2"]);
+                           break;
+                        case Character.GunLevel.Medium:
+                           _shopList[i].Render(_textureShader, _textures["gun3"]);
+                           break;
+                        case Character.GunLevel.High:
+                           continue;
+                     }
+                     break;
+                  case 2:
+                     switch (_character.Boots)
+                     {
+                        case Character.BootsLevel.Default:
+                           _shopList[i].Render(_textureShader, _textures["shoes"]);
+                           break;
+                        case Character.BootsLevel.Medium:
+                           continue;
+                     }
+
+                     break;
+
+               }
+            }
+         }
+
+         for (int i = 0; i < 3; i++)
+         {
+            string interfaceName = "item" + $"{i}" + "_coin";
+            if (_available[i] is true)
+            {
+               _pricesInterface[interfaceName].Render(_textureShader);
+            }
+         }
+
+         for (int i = 0; i < 3; i++)
+         {
+            string interfaceName = "item" + $"{i}" + "_counter";
+            if (_available[i] is true)
+            {
+               _pricesInterface[interfaceName].Render(_textureShader, _prices[i]);
+            }
+         }
+
+         DrawProjectiles();
+
+         _character.Render(_textureShader, _textures["char1"]);
+         DrawInterface(gameState);
       }
    }
 

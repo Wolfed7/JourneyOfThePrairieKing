@@ -81,12 +81,14 @@ namespace JourneyOfThePrairieKing
       {
          Default = 100,
          Medium = 120,
+         High = 140,
       }
 
       public enum GunLevel
       {
          Default = 100,
          Medium = 80,
+         High = 60,
       }
 
       private float _defaultVelocity = 0.12f;
@@ -129,12 +131,6 @@ namespace JourneyOfThePrairieKing
          LastHitTime = time;
       }
 
-      public void Dispose()
-      {
-         _vao.Dispose();
-         _vbo.Dispose();
-      }
-
       public void Reset()
       {
          Position = new Vector2(0, 0);
@@ -155,6 +151,18 @@ namespace JourneyOfThePrairieKing
             {
                CoinsCount = 99;
             }
+         }
+      }
+
+      public void SpendCoins(int count)
+      {
+         if (count > 0)
+         {
+            if (CoinsCount < count)
+            {
+               return;
+            }
+            CoinsCount -= count;
          }
       }
 

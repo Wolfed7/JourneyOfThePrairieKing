@@ -88,9 +88,9 @@ namespace JourneyOfThePrairieKing
          _levels = new List<Level>
          {
             new Level1(_textures, "level1", _textureShader, winSize, mapPosition, mapSize),
-            //new Shop1(_textures, "shop", _textureShader, winSize, mapPosition, mapSize),
+            new Shop(_textures, "level1", _textureShader, winSize, mapPosition, mapSize),
             new Level2(_textures, "level2",_textureShader, winSize, mapPosition, mapSize),
-            //new Shop2(_textures,"shop", _textureShader, winSize, mapPosition, mapSize),
+            new Shop(_textures,"level2", _textureShader, winSize, mapPosition, mapSize),
             new BossLevel(_textures,"level3", _textureShader, winSize, mapPosition, mapSize),
          };
 

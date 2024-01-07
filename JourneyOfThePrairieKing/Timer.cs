@@ -57,7 +57,10 @@ namespace JourneyOfThePrairieKing
          _timeRemains -= elapsedMilliseconds;
 
          if (_timeRemains <= 0)
+         {
+            _timeRemains = 0;
             isTimeEnds = true;
+         }
       }
 
       public void Reset()
