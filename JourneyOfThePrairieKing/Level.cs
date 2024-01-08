@@ -700,17 +700,17 @@ namespace JourneyOfThePrairieKing
       {
          const long bonusTTL = 10_000;
          var rand = new Random();
-         var prob = 0.75f;
+         var prob = 0.4f;
          if (rand.NextDouble() > prob)
          {
             return;
          }
 
-         var prob0 = 0.7f; // coin
+         var prob0 = 0.6f; // coin
          var prob1 = 0.1f; // shotgun
          var prob2 = 0.1f; // wheel
-         var prob3 = 0.05f; // life
-         var prob4 = 0.05f; // bomb
+         var prob3 = 0.1f; // life
+         var prob4 = 0.1f; // bomb
 
          
          Bonus.BonusType bonusType = Bonus.BonusType.Coin;
@@ -785,7 +785,7 @@ namespace JourneyOfThePrairieKing
 
       private const long _enemySpawnCooldown = 3_000;
       private const long _levelPlayTime = 120_000;
-      private const int _maxEnemiesAtTime = 15;
+      private const int _maxEnemiesAtTime = 12;
 
       #endregion
 
@@ -1133,7 +1133,7 @@ namespace JourneyOfThePrairieKing
 
       private const long _enemySpawnCooldown = 2_000;
       private const long _levelPlayTime = 120_000;
-      private const int _maxEnemiesAtTime = 20;
+      private const int _maxEnemiesAtTime = 16;
 
       #endregion
 

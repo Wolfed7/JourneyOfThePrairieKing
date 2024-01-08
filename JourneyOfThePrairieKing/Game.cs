@@ -240,8 +240,13 @@ namespace JourneyOfThePrairieKing
                   break;
 
                case GameState.GameOver:
+
+                  for (int i = 0; i < _levels.Count; i++)
+                  {
+                     _levels[i].Restart();
+                  }
+                  
                   _currentLevel = 0;
-                  _levels[_currentLevel].Restart();
                   _gameState = GameState.Run;
                   break;
 

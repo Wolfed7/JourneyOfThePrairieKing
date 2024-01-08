@@ -260,7 +260,7 @@ namespace JourneyOfThePrairieKing
       private long _defaultReloadTime = 400;
 
 
-      public static readonly int DefaultHP = 80;
+      public static readonly int DefaultHP = 120;
 
       public bool IsDead { get; set; }
       public int HitPoints { get; private set; }
