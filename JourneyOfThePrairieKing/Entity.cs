@@ -54,15 +54,23 @@ namespace JourneyOfThePrairieKing
       {
          _vbo.Dispose();
          _vao.Dispose();
+         GC.SuppressFinalize(this);
       }
 
       public static bool CheckCollision(Entity one, Entity two)
       {
-         bool collisionX = one.Position.X + one.Size.X >= two.Position.X &&
-             two.Position.X + two.Size.X >= one.Position.X;
+         var colSizeOne = one.Size;
+         var colSizeTwo = two.Size;
 
-         bool collisionY = one.Position.Y + one.Size.Y >= two.Position.Y &&
-             two.Position.Y + two.Size.Y >= one.Position.Y;
+         //var colSizeOne = one.Size * 0.8f;
+         //var colSizeTwo = two.Size * 0.8f;
+
+
+         bool collisionX = one.Position.X + colSizeOne.X >= two.Position.X &&
+             two.Position.X + colSizeTwo.X >= one.Position.X;
+
+         bool collisionY = one.Position.Y + colSizeOne.Y >= two.Position.Y &&
+             two.Position.Y + colSizeTwo.Y >= one.Position.Y;
 
          return collisionX && collisionY;
       }
@@ -252,7 +260,7 @@ namespace JourneyOfThePrairieKing
       private long _defaultReloadTime = 400;
 
 
-      public static readonly int DefaultHP = 80;
+      public static readonly int DefaultHP = 30;
 
       public bool IsDead { get; set; }
       public int HitPoints { get; private set; }
@@ -301,8 +309,6 @@ namespace JourneyOfThePrairieKing
          bool onPos = false;
          var distance = Destination - Position;
 
-         Console.WriteLine(distance.Length);
-
          if (distance.Length < distanceEps
             || distance.Length - prevDistanceLength > 0)
          {
@@ -322,16 +328,16 @@ namespace JourneyOfThePrairieKing
 
    public sealed class Projectile : Entity, IMovable
    {
-      private float _defaultVelocity = 0.2f;
+      private const float _defaultVelocity = 0.2f;
 
       public int Damage { get; }
       public Vector2 Direction { get; }
       public  float Velocity { get; set; }
 
-      public Projectile(Vector2 size, Vector2 position, Vector2 direction, int damage) : base(size, position)
+      public Projectile(Vector2 size, Vector2 position, Vector2 direction, int damage, float velocity = _defaultVelocity) : base(size, position)
       {
          Direction = direction;
-         Velocity = _defaultVelocity;
+         Velocity = velocity;
 
          Damage = damage;
       }

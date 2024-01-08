@@ -56,6 +56,9 @@
     <None Update="data\textures\gun3.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <None Update="data\textures\icefire.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Update="data\textures\level3.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>

@@ -65,7 +65,7 @@ namespace JourneyOfThePrairieKing
 
       protected override void OnLoad()
       {
-         //WindowState = WindowState.Fullscreen;
+         WindowState = WindowState.Fullscreen;
          IsVisible = true;
          GL.Enable(EnableCap.Blend);
          GL.BlendFunc((BlendingFactor)BlendingFactorSrc.SrcAlpha, (BlendingFactor)BlendingFactorDest.OneMinusSrcAlpha);
@@ -116,14 +116,13 @@ namespace JourneyOfThePrairieKing
       {
          if(_gameState is GameState.Win)
          {
-            if (_currentLevel + 1 > _levels.Count)
+            if (_currentLevel + 1 > _levels.Count - 1)
             {
                if (IsKeyDown(Keys.Enter))
                {
-                  _currentLevel = 0;
-                  _levels[_currentLevel].Restart();
-                  _gameState = GameState.Start;
+                  Close();
                }
+
                return;
             }
             _currentLevel++;

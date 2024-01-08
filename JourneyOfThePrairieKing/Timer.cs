@@ -23,11 +23,13 @@ namespace JourneyOfThePrairieKing
       public Vector2 Position { get; init; }
       public long LevelPlaytime { get; init; }
 
-      public bool isTimeEnds;
+      public float Ratio => (float)_timeRemains / LevelPlaytime;
+
+      public bool IsTimeEnded;
 
       public Timer(long milliseconds, Vector2 position, Vector2 size)
       {
-         isTimeEnds = false;
+         IsTimeEnded = false;
          LevelPlaytime = milliseconds;
          Size = size;
          Position = position;
@@ -51,7 +53,7 @@ namespace JourneyOfThePrairieKing
       public void Update(long elapsedMilliseconds)
       {
          //Console.WriteLine(_timeRemains);
-         if (isTimeEnds is true)
+         if (IsTimeEnded is true)
             return;
          
          _timeRemains -= elapsedMilliseconds;
@@ -59,14 +61,14 @@ namespace JourneyOfThePrairieKing
          if (_timeRemains <= 0)
          {
             _timeRemains = 0;
-            isTimeEnds = true;
+            IsTimeEnded = true;
          }
       }
 
       public void Reset()
       {
          _timeRemains = LevelPlaytime;
-         isTimeEnds = false;
+         IsTimeEnded = false;
       }
 
       public void Render(Shader shader, Texture texture)
