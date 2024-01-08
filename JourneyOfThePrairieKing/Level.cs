@@ -1,12 +1,7 @@
-﻿using JourneyOfThePrairieKing;
-using OpenTK.Graphics.OpenGL4;
+﻿using OpenTK.Graphics.OpenGL4;
 using OpenTK.Mathematics;
 using OpenTK.Windowing.Common;
-using OpenTK.Windowing.Desktop;
-using OpenTK.Windowing.GraphicsLibraryFramework;
-using System.ComponentModel.Design;
 using System.Diagnostics;
-using System.Threading;
 
 namespace JourneyOfThePrairieKing
 {
@@ -398,6 +393,7 @@ namespace JourneyOfThePrairieKing
                if (Entity.CheckCollision(projectile, obstacle) is true)
                {
                   _projectiles.Remove(projectile);
+                  projectile.Dispose();
                   projectileAlive = false;
                   break;
                }
@@ -418,8 +414,10 @@ namespace JourneyOfThePrairieKing
                   {
                      SpawnBonus(enemy.Position + enemy.Size / 2.0f);
                      _enemies.Remove(enemy);
+                     enemy.Dispose();
                   }
                   _projectiles.Remove(projectile);
+                  projectile.Dispose();
                   //Console.WriteLine("Enemy hit!");
                   break;
                }
@@ -701,16 +699,16 @@ namespace JourneyOfThePrairieKing
       {
          const long bonusTTL = 10_000;
          var rand = new Random();
-         var prob = 0.9f;
+         var prob = 0.35f;
          if (rand.NextDouble() > prob)
          {
             return;
          }
 
-         var prob0 = 0.5f; // coin
-         var prob1 = 0.3f; // shotgun
-         var prob2 = 0.15f; // wheel
-         var prob3 = 0.1f; // life
+         var prob0 = 0.7f; // coin
+         var prob1 = 0.1f; // shotgun
+         var prob2 = 0.1f; // wheel
+         var prob3 = 0.05f; // life
          var prob4 = 0.05f; // bomb
 
          
@@ -785,7 +783,7 @@ namespace JourneyOfThePrairieKing
       #region Constants
 
       private const long _enemySpawnCooldown = 3_000;
-      private const long _levelPlayTime = 120_00;
+      private const long _levelPlayTime = 120_000;
       private const int _maxEnemiesAtTime = 15;
 
       #endregion
@@ -1127,7 +1125,7 @@ namespace JourneyOfThePrairieKing
       #region Constants
 
       private const long _enemySpawnCooldown = 2_000;
-      private const long _levelPlayTime = 120_00;
+      private const long _levelPlayTime = 120_000;
       private const int _maxEnemiesAtTime = 20;
 
       #endregion
@@ -1196,9 +1194,12 @@ namespace JourneyOfThePrairieKing
 
    public sealed class BossLevel : Level
    {
+      private Vector2 _bossProjectileSize;
+      private Vector2 _bossStartPosition;
+      private Vector2 _charStartPosition;
+
       private Boss _boss;
       private HashSet<Projectile> _bossProjectiles;
-
 
       public BossLevel
          (
@@ -1211,35 +1212,88 @@ namespace JourneyOfThePrairieKing
          Character? character = null
          ) : base(textures, mapTextureName, textureShader, winSize, mapPosition, mapSize, character)
       {
-         _boss = new Boss(new Vector2(MapSize.X / 8.0f, MapSize.Y / 8.0f), Coordinates.PosInNDC(new Vector2(_winSize.X / 2 - 2 * _tileSize.X, 200), _winSize));
+         _charStartPosition = Coordinates.PosInNDC(new Vector2(_winSize.X / 2 - 31, 800), _winSize);
+         _bossStartPosition = Coordinates.PosInNDC(new Vector2(_winSize.X / 2 - 2 * _tileSize.X, 200), _winSize) ;
+         _boss = new Boss(new Vector2(MapSize.X / 8.0f, MapSize.Y / 8.0f), _bossStartPosition);
          _levelTimer = new Timer(_boss.HitPoints, Coordinates.PosInNDC(new Vector2(460, 1040), _winSize), new Vector2(MapSize.X, MapSize.Y / 100));
          _bossProjectiles = new HashSet<Projectile>();
+         _bossProjectileSize = Coordinates.SizeInNDC(new Vector2(24, 24), _winSize);
+
+
+         BossDecision();
       }
 
       public override void OnCharacterSet(Character character)
       {
-
-         character.ChangePosition(Coordinates.PosInNDC(new Vector2(_winSize.X / 2 - 31, 800), _winSize));
+         character.ChangePosition(_charStartPosition);
       }
 
       public override void Update(FrameEventArgs args, Vector2 moveDir, Vector2 projectileDir, ref Stopwatch gameRunTime, ref GameState gameState)
       {
          base.Update(args, moveDir, projectileDir, ref gameRunTime, ref gameState);
 
-         if (_levelTimer.isTimeEnds)
+         float deltaTime = (float)args.Time;
+
+         //Console.WriteLine(deltaTime);
+         deltaTime = (float)Math.Min(deltaTime, FrameRate.MaxDeltaTime);
+         deltaTime = (float)Math.Max(deltaTime, FrameRate.MinDeltaTime);
+
+         if (_levelTimer.isTimeEnds && _boss.IsDead is false)
          {
             _boss.IsDead = true;
+            RemoveBossProjectiles();
          }
 
-         if (_boss.IsDead is false)
+         if (_boss.IsDead is true)
          {
-            foreach (var projectile in _projectiles)
+            return;
+         }
+
+         if (_boss.OnHisDestination() is true)
+         {
+            _boss.StopMoving();
+            if (gameRunTime.ElapsedMilliseconds - _boss.LastShotTime > _boss.ReloadTime)
             {
-               if (Entity.CheckCollision(_boss, projectile))
+               _boss.LastShotTime = gameRunTime.ElapsedMilliseconds;
+               SpawnBossProjectiles();
+            }
+         }
+
+         _boss.ChangePosition(_boss.Position + _boss.Direction * deltaTime * _winSizeToSquare * _boss.Velocity);
+
+         foreach (var projectile in _projectiles)
+         {
+            if (Entity.CheckCollision(_boss, projectile))
+            {
+               BossDecision();
+               projectile.Dispose();
+               _projectiles.Remove(projectile);
+               _levelTimer.Update(projectile.Damage);
+            }
+         }
+
+         foreach (var projectile in _bossProjectiles)
+         {
+            projectile.ChangePosition(projectile.Position + projectile.Direction * deltaTime * _winSizeToSquare * projectile.Velocity);
+
+            if (Entity.CheckCollision(_character, projectile))
+            {
+               _bossProjectiles.Remove(projectile);
+               projectile.Dispose();
+
+               _character.GotDamage(1, gameRunTime.ElapsedMilliseconds);
+               if (_character.HitPoints < 0)
                {
+                  gameState = GameState.GameOver;
+               }
+            }
+
+            foreach (var obstacle in _boundaryObstacles)
+            {
+               if (Entity.CheckCollision(obstacle, projectile))
+               {
+                  _bossProjectiles.Remove(projectile);
                   projectile.Dispose();
-                  _projectiles.Remove(projectile);
-                  _levelTimer.Update(projectile.Damage);
                }
             }
          }
@@ -1248,9 +1302,18 @@ namespace JourneyOfThePrairieKing
 
       public override void Render(FrameEventArgs args, GameState gameState)
       {
-         base.Render(args, gameState);
-
+         Texture.DrawTexturedRectangle(_textureShader, _textures[_mapTextureName], MapPosition, _mapVao);
          _levelTimer.Render(_textureShader, _textures["bossbar"]);
+
+         if (_enemies.Count == 0 && _enemySpawnAllowed is false)
+         {
+            _Interfaces["arrow"].Render(_textureShader);
+         }
+
+
+         DrawProjectiles();
+
+         _character.Render(_textureShader, _textures["char1"]);
 
          if (_boss.IsDead is false)
          {
@@ -1261,12 +1324,51 @@ namespace JourneyOfThePrairieKing
          {
             projectile.Render(_textureShader, _textures["fireball"]);
          }
+
+         DrawInterface(gameState);
       }
 
+      private void BossDecision()
+      {
+         var rand = new Random();
+         int randTileX = rand.Next(1, 14);
+         int randTileY = rand.Next(1, 14);
+
+
+         Vector2 randPoint = new Vector2(MapPosition.X + _tileSize.X * randTileX, MapPosition.Y + _tileSize.Y * randTileY);
+         var direction = randPoint - _boss.Position;
+         direction.Normalize();
+
+         _boss.ChangeDestination(randPoint);
+         _boss.ChangeDirection(direction);
+      }
 
       private void SpawnBossProjectiles()
       {
+         var vecToChar = _character.Position - _boss.Position;
+         vecToChar.Normalize();
 
+         _bossProjectiles.Add(new Projectile(_bossProjectileSize, _boss.Position, vecToChar, 1));
+      }
+
+      public override void Restart()
+      {
+         base.Restart();
+
+         _bossProjectiles.Clear();
+         _character.ChangePosition(_charStartPosition);
+         _boss.ChangePosition(_bossStartPosition);
+         _levelTimer.Reset();
+         BossDecision();
+      }
+
+      private void RemoveBossProjectiles()
+      {
+         foreach (var projectile in _bossProjectiles)
+         {
+            _bossProjectiles.Remove(projectile);
+            projectile.Dispose();
+         }
       }
    }
 }

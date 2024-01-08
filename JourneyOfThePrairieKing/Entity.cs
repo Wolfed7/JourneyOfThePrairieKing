@@ -139,6 +139,11 @@ namespace JourneyOfThePrairieKing
          LastHitTime = 0;
          LastShotTime = 0;
          HitPoints = _defaultHitPoints;
+         CoinsCount = 0;
+
+         Ammo = ProjectileLevel.Stone;
+         Boots = BootsLevel.Default;
+         Gun = GunLevel.Default;
       }
 
       public void GotCoin(int count)
@@ -242,19 +247,33 @@ namespace JourneyOfThePrairieKing
          Third,
       }
 
+      private float prevDistanceLength;
+      private const float distanceEps = 0.001f;
+      private long _defaultReloadTime = 400;
+
+
       public static readonly int DefaultHP = 80;
 
       public bool IsDead { get; set; }
       public int HitPoints { get; private set; }
       public float Velocity { get; set; }
       public BossPhase Phase { get; set; }
+      public Vector2 Direction { get; private set; }
+      public Vector2 Destination { get; private set; }
 
+      public long ReloadTime { get; set; } // Milliseconds
+      public long LastShotTime { get; set; } // Milliseconds
 
       public Boss(Vector2 size, Vector2 position) : base(size, position)
       {
+         prevDistanceLength = 2;
+         Velocity = 0.2f;
          HitPoints = DefaultHP;
          Phase = BossPhase.First;
          IsDead = false;
+
+         ReloadTime = _defaultReloadTime;
+         LastShotTime = 0;
       }
 
       public void GotDamage(int damage)
@@ -265,6 +284,39 @@ namespace JourneyOfThePrairieKing
       public void ChangePosition(Vector2 position)
       {
          Position = position;
+      }
+
+      public void ChangeDirection(Vector2 direction)
+      {
+        Direction = direction;
+      }
+
+      public void ChangeDestination(Vector2 destination)
+      {
+         Destination = destination;
+      }
+
+      public bool OnHisDestination()
+      {
+         bool onPos = false;
+         var distance = Destination - Position;
+
+         Console.WriteLine(distance.Length);
+
+         if (distance.Length < distanceEps
+            || distance.Length - prevDistanceLength > 0)
+         {
+            onPos = true;
+         }
+         prevDistanceLength =  distance.Length;
+         return onPos;
+      }
+
+      public void StopMoving()
+      {
+         Destination = Position;
+         Direction = Vector2.Zero;
+         prevDistanceLength = 2;
       }
    }
 
