@@ -700,7 +700,7 @@ namespace JourneyOfThePrairieKing
       {
          const long bonusTTL = 10_000;
          var rand = new Random();
-         var prob = 0.35f;
+         var prob = 0.75f;
          if (rand.NextDouble() > prob)
          {
             return;
@@ -959,11 +959,17 @@ namespace JourneyOfThePrairieKing
 
             interfaceName = "item" + $"{k}" + "_coin";
             var CoinIcon = new LevelInterface(coinSize, new Vector2(shopStartPosition.X + itemSize.X * k + itemSize.X / 2 * k + 2.3f * digitSize.X, shopStartPosition.Y - 1.0f * itemSize.Y + coinSize.Y / 4), _textures["coin"]);
-            _pricesInterface.Add(interfaceName, CoinIcon);
+            if (_pricesInterface.ContainsKey(interfaceName) is false)
+            {
+               _pricesInterface.Add(interfaceName, CoinIcon);
+            }
 
             interfaceName = "item" + $"{k}" + "_counter";
             var CostCounter = new Counter(digitSize, new Vector2(shopStartPosition.X + itemSize.X * k + itemSize.X / 2 * k, shopStartPosition.Y - 1.0f * itemSize.Y), _textures["digits"], 10);
-            _pricesInterface.Add(interfaceName, CostCounter);
+            if (_pricesInterface.ContainsKey(interfaceName) is false)
+            {
+               _pricesInterface.Add(interfaceName, CostCounter);
+            }
          }
       }
 
@@ -1099,7 +1105,7 @@ namespace JourneyOfThePrairieKing
          for (int i = 0; i < 3; i++)
          {
             string interfaceName = "item" + $"{i}" + "_coin";
-            if (_available[i] is true && _pricesInterface.ContainsKey(interfaceName) is false)
+            if (_available[i] is true)
             {
                _pricesInterface[interfaceName].Render(_textureShader);
             }
@@ -1108,7 +1114,7 @@ namespace JourneyOfThePrairieKing
          for (int i = 0; i < 3; i++)
          {
             string interfaceName = "item" + $"{i}" + "_counter";
-            if (_available[i] is true && _pricesInterface.ContainsKey(interfaceName) is false)
+            if (_available[i] is true)
             {
                _pricesInterface[interfaceName].Render(_textureShader, _prices[i]);
             }
