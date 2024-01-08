@@ -1125,6 +1125,18 @@ namespace JourneyOfThePrairieKing
          _character.Render(_textureShader, _textures["char1"]);
          DrawInterface(gameState);
       }
+
+      public override void Restart()
+      {
+         _enemySpawnAllowed = false;
+         _enemyLastSpawnTime = 0;
+         _enemies.Clear();
+         _bonuses.Clear();
+         _projectiles.Clear();
+         _character.Reset();
+         _levelTimer.Reset();
+         _activeBonus = null;
+      }
    }
 
    public sealed class Level2 : Level
@@ -1316,23 +1328,24 @@ namespace JourneyOfThePrairieKing
                      SpawnBossProjectiles(_boss.Phase, gameRunTime.ElapsedMilliseconds);
                   }
 
-                  if (gameRunTime.ElapsedMilliseconds % 4000 == 1)
+                  if (gameRunTime.ElapsedMilliseconds % 1200 == 5)
                   {
                      BossDecision();
+                  }
+
+                  foreach (var projectile in _projectiles)
+                  {
+                     if (Entity.CheckCollision(_boss, projectile))
+                     {
+                        projectile.Dispose();
+                        _projectiles.Remove(projectile);
+                        _levelTimer.Update(projectile.Damage);
+                     }
                   }
                }
 
                _boss.ChangePosition(_boss.Position + _boss.Direction * deltaTime * _winSizeToSquare * _boss.Velocity);
 
-               foreach (var projectile in _projectiles)
-               {
-                  if (Entity.CheckCollision(_boss, projectile))
-                  {
-                     projectile.Dispose();
-                     _projectiles.Remove(projectile);
-                     _levelTimer.Update(projectile.Damage);
-                  }
-               }
                break;
             }
             case Boss.BossPhase.Third:
@@ -1345,12 +1358,12 @@ namespace JourneyOfThePrairieKing
                      SpawnBossProjectiles(_boss.Phase, gameRunTime.ElapsedMilliseconds);
                   }
 
-                  if (gameRunTime.ElapsedMilliseconds % 10000 < 10)
+                  if (gameRunTime.ElapsedMilliseconds % 1000 < 2)
                   {
                      BossDecision();
                   }
 
-                  if (gameRunTime.ElapsedMilliseconds - _lastSummonTime > 5000)
+                  if (gameRunTime.ElapsedMilliseconds - _lastSummonTime > 4200)
                   {
                      _lastSummonTime = gameRunTime.ElapsedMilliseconds;
                      var pos = _boss.Position + _boss.Size / 2;
