@@ -2,6 +2,7 @@
 using OpenTK.Graphics.OpenGL4;
 using OpenTK.Mathematics;
 
+
 namespace JourneyOfThePrairieKing
 {
    interface IMovable
@@ -134,7 +135,8 @@ namespace JourneyOfThePrairieKing
       {
          if (time - LastHitTime < HitCooldown)
             return;
-
+         System.Media.SoundPlayer player = new System.Media.SoundPlayer(@"classic_hurt.wav");
+         player.Play();
          HitPoints -= damage;
          LastHitTime = time;
       }
