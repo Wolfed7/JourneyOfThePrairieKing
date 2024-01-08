@@ -1099,7 +1099,7 @@ namespace JourneyOfThePrairieKing
          for (int i = 0; i < 3; i++)
          {
             string interfaceName = "item" + $"{i}" + "_coin";
-            if (_available[i] is true)
+            if (_available[i] is true && _pricesInterface.ContainsKey(interfaceName) is false)
             {
                _pricesInterface[interfaceName].Render(_textureShader);
             }
@@ -1108,7 +1108,7 @@ namespace JourneyOfThePrairieKing
          for (int i = 0; i < 3; i++)
          {
             string interfaceName = "item" + $"{i}" + "_counter";
-            if (_available[i] is true)
+            if (_available[i] is true && _pricesInterface.ContainsKey(interfaceName) is false)
             {
                _pricesInterface[interfaceName].Render(_textureShader, _prices[i]);
             }
