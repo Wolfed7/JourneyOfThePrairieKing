@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace JourneyOfThePrairieKing
+﻿namespace JourneyOfThePrairieKing
 {
    class Program
    {
