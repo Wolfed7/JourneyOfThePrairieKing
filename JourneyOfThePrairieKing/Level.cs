@@ -700,7 +700,7 @@ namespace JourneyOfThePrairieKing
       {
          const long bonusTTL = 10_000;
          var rand = new Random();
-         var prob = 0.6f;
+         var prob = 0.8f;
          if (rand.NextDouble() > prob)
          {
             return;
@@ -784,7 +784,7 @@ namespace JourneyOfThePrairieKing
       #region Constants
 
       private const long _enemySpawnCooldown = 3_000;
-      private const long _levelPlayTime = 30_000;
+      private const long _levelPlayTime = 40_000;
       private const int _maxEnemiesAtTime = 12;
 
       #endregion
@@ -1144,7 +1144,7 @@ namespace JourneyOfThePrairieKing
       #region Constants
 
       private const long _enemySpawnCooldown = 2_000;
-      private const long _levelPlayTime = 30_000;
+      private const long _levelPlayTime = 40_000;
       private const int _maxEnemiesAtTime = 16;
 
       #endregion
