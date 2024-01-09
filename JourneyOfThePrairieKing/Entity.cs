@@ -135,7 +135,7 @@ namespace JourneyOfThePrairieKing
       {
          if (time - LastHitTime < HitCooldown)
             return;
-         System.Media.SoundPlayer player = new System.Media.SoundPlayer(@"classic_hurt.wav");
+         System.Media.SoundPlayer player = new System.Media.SoundPlayer(@"data\sounds\classic_hurt.wav");
          player.Play();
          HitPoints -= damage;
          LastHitTime = time;

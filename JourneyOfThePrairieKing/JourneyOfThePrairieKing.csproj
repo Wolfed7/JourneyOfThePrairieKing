@@ -23,6 +23,9 @@
     <None Update="data\shaders\textureShader.vert">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <None Update="data\sounds\classic_hurt.wav">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Update="data\textures\ammo2.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
